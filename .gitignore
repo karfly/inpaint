@@ -103,5 +103,6 @@ ENV/
 # Visual Studio Code
 .vscode
 
-# other
+# StrausMG
 local_data
+draft.ipynb
