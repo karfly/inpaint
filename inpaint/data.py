@@ -15,7 +15,7 @@ class Flipper:
             x = (x[0].transpose(Image.FLIP_LEFT_RIGHT), x[1][::-1].copy())
         return x
 
-    
+
 class Jitter:
     def __init__(self, *args, **kwargs):
         self._jitter = tv.transforms.ColorJitter(*args, **kwargs)
@@ -25,8 +25,6 @@ class Jitter:
 
 
 def to_numpy(x):
-    global A
-    A = np.array(x[0]).transpose((2, 0, 1)), x[1]
     return np.array(x[0]).transpose((2, 0, 1)), x[1]
 
 
