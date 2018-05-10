@@ -6,7 +6,7 @@ import torch
 import torchvision as tv
 
 
-class Flipper:
+class _Flipper:
     def __init__(self, p=0.5):
         self._p = p
 
@@ -16,7 +16,7 @@ class Flipper:
         return x
 
 
-class Jitter:
+class _Jitter:
     def __init__(self, *args, **kwargs):
         self._jitter = tv.transforms.ColorJitter(*args, **kwargs)
 
@@ -24,21 +24,21 @@ class Jitter:
         return self._jitter(x[0]), x[1]
 
 
-def to_numpy(x):
-    return np.array(x[0]).transpose((2, 0, 1)), x[1]
+def _resize_and_to_numpy(x):
+    return np.array(x[0].resize((256, 256))).transpose((2, 0, 1)), x[1]
 
 
 def _generate_mask(shape):
     return np.ones(shape, dtype=np.float32)
 
-    
+
 class _CelebaDataset(torch.utils.data.Dataset):
-    def __init__(self, input_dir, transform=None):
+    def __init__(self, input_dir, transform=_resize_and_to_numpy):
         self._input = [
             os.path.join(input_dir, x)
             for x in os.listdir(input_dir)
         ]
-        self._transform = transform or to_numpy
+        self._transform = transform or _resize_and_to_numpy
 
     def __len__(self):
         return len(self._input)
@@ -48,16 +48,16 @@ class _CelebaDataset(torch.utils.data.Dataset):
         return self._transform((img, _generate_mask(img.size[::-1])))
 
 
-def make_default_transform():
+def _make_default_transform():
     return tv.transforms.Compose([
-        Flipper(),
-        Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
-        to_numpy
+        _Flipper(),
+        _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
+        _resize_and_to_numpy
     ])
 
 
 def make_dataloader(input_dir, transform='default', *args, **kwargs):
     if transform == 'default':
-        transform = make_default_transform()
+        transform = _make_default_transform()
     dataset = _CelebaDataset(input_dir, transform)
     return torch.utils.data.DataLoader(dataset, *args, **kwargs)

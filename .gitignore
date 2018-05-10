@@ -106,3 +106,4 @@ ENV/
 # StrausMG
 local_data
 draft.ipynb
+.DS_Store
