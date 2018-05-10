@@ -1,4 +1,5 @@
 import os
+import math
 
 import numpy as np
 import PIL.Image as Image
@@ -24,8 +25,11 @@ class _Jitter:
         return self._jitter(x[0]), x[1]
 
 
-def _resize_and_to_numpy(x):
-    return np.array(x[0].resize((256, 256))).transpose((2, 0, 1)), x[1]
+def _check_shape_and_to_numpy(x):
+    # shape must be sqaure with a side that is power of 2
+    assert x.shape[0] == x.shape[1]
+    assert not math.modf(math.log2(x.shape[0]))[0]
+    return np.array(x).transpose((2, 0, 1)), x[1]
 
 
 def _generate_mask(shape):
@@ -33,12 +37,12 @@ def _generate_mask(shape):
 
 
 class _CelebaDataset(torch.utils.data.Dataset):
-    def __init__(self, input_dir, transform=_resize_and_to_numpy):
+    def __init__(self, input_dir, transform=_check_shape_and_to_numpy):
         self._input = [
             os.path.join(input_dir, x)
             for x in os.listdir(input_dir)
         ]
-        self._transform = transform or _resize_and_to_numpy
+        self._transform = transform
 
     def __len__(self):
         return len(self._input)
@@ -52,7 +56,7 @@ def _make_default_transform():
     return tv.transforms.Compose([
         _Flipper(),
         _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
-        _resize_and_to_numpy
+        _check_shape_and_to_numpy
     ])
 
 
