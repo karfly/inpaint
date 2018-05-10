@@ -33,7 +33,7 @@ def _check_shape_and_to_numpy(x):
 
 
 def _generate_mask(shape):
-    return np.ones(shape, dtype=np.float32)
+    return np.random.randint(0, 2, shape)
 
 
 class _CelebaDataset(torch.utils.data.Dataset):
