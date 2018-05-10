@@ -61,19 +61,33 @@ class _PretrainedFeaturesGenerator(nn.Module):
                 output.append(x.view(*x.shape[:2], -1) if self._reshape else x)
                 layers.remove(layer)
         return output
+    
+
+class Normalization(nn.Module):
+    def __init__(self, mean, std):
+        super(Normalization, self).__init__()
+        # .view the mean and std to make them [C x 1 x 1] so that they can
+        # directly work with image Tensor of shape [B x C x H x W].
+        # B is batch size. C is number of channels. H is height and W is width.
+        self.mean = nn.Parameter(torch.tensor(mean).view(-1, 1, 1), requires_grad=False)
+        self.std = nn.Parameter(torch.tensor(std).view(-1, 1, 1), requires_grad=False)
+
+    def forward(self, img):
+        # normalize img
+        return (img - self.mean) / self.std
 
 
 def _calculate_gram_matrices(features):
     return [x.matmul(x.transpose(-2, -1)) for x in features]
 
 
-def _make_normalizer(feature_count, means, stds):
-    x = nn.BatchNorm2d(feature_count, affine=False)
-    x.weight = nn.Parameter(torch.tensor(means))
-    x.bias = nn.Parameter(torch.tensor(stds) ** 2)
-    x.weight.requires_grad_(False)
-    x.bias.requires_grad_(False)
-    return x
+# def _make_normalizer(feature_count, means, stds):
+#     x = nn.BatchNorm2d(feature_count, affine=False)
+#     x.weight = nn.Parameter(torch.tensor(means))
+#     x.bias = nn.Parameter(torch.tensor(stds) ** 2)
+#     x.weight.requires_grad_(False)
+#     x.bias.requires_grad_(False)
+#     return x
 
 
 class InpaintLoss(nn.Module):
@@ -99,16 +113,12 @@ class InpaintLoss(nn.Module):
                 ('4', '9', '16'),
                 # see https://pytorch.org/docs/stable/torchvision/models.html#torchvision-models
                 # for undestanding why these figures
-                _make_normalizer(
-                    3,
-                    [0.485, 0.456, 0.406],
-                    [0.229, 0.224, 0.225]
-                )
+                Normalization([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             )
         )
 
     def forward(self, out, mask, gt):
-        loss = torch.tensor(0, dtype=torch.float32, requires_grad=True)
+        loss = torch.tensor(0, dtype=torch.float32, requires_grad=True).to(out.device)
 
         loss = loss + self._valid_coef * F.l1_loss(mask * out, mask * gt)
         reversed_mask = 1 - mask
@@ -129,7 +139,7 @@ class InpaintLoss(nn.Module):
             _style_loss(out_gram_matrices, gt_gram_matrices, coefs)
         )
 
-        comp = torch.where(mask.type(torch.uint8), gt, out)
+        comp = torch.where(mask.type(torch.uint8), gt, out).to(out.device)
         comp_features = self._style_features_generator(comp)
         loss = loss + self._perceptual_coef * (
             _perceptual_loss(comp_features, gt_features)

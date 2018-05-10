@@ -31,10 +31,10 @@ def _resize_and_to_numpy(x):
     return np.array(x[0].resize((256, 256))).transpose((2, 0, 1)), x[1]
 
 
-
 def _generate_trivial_mask(shape):
 #     return np.ones(shape, dtype=np.float32)
     return (np.random.rand(*shape) > 0.2).astype('float32')
+
 
 class _MaskGenerator:
     def __init__(self, masks_dir, n_images_by_file=10000):
@@ -115,9 +115,10 @@ class _CelebaDataset(torch.utils.data.Dataset):
 
 def _make_default_transform():
     return tv.transforms.Compose([
-        _Flipper(),
-        _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
-        _resize_and_to_numpy
+#         _Flipper(),
+#         _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
+        _resize_and_to_numpy,
+        tv.transforms.Lambda(lambda batch: (batch[0] / 255.0, batch[1]))
     ])
 
 
