@@ -1,11 +1,13 @@
 import os
-import math
 
 import numpy as np
 import PIL.Image as Image
 import torch
 import torchvision as tv
+import jsonlines
 
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 class _Flipper:
     def __init__(self, p=0.5):
@@ -25,40 +27,94 @@ class _Jitter:
         return self._jitter(x[0]), x[1]
 
 
-def _check_shape_and_to_numpy(x):
-    # shape must be sqaure with a side that is power of 2
-    assert x[0].size[0] == x[0].size[1]
-    assert not math.modf(math.log2(x[0].size[0]))[0]
-    return np.array(x[0]).transpose((2, 0, 1)), x[1]
+def _resize_and_to_numpy(x):
+    return np.array(x[0].resize((256, 256))).transpose((2, 0, 1)), x[1]
 
 
-def _generate_mask(shape):
+
+def _generate_trivial_mask(shape):
 #     return np.ones(shape, dtype=np.float32)
     return (np.random.rand(*shape) > 0.2).astype('float32')
 
+class _MaskGenerator:
+    def __init__(self, masks_dir, n_images_by_file=10000):
+        self.strokes = []
+        n_images_by_file = 10000
+
+        for name in os.listdir(masks_dir):
+            reader = jsonlines.open(os.path.join(masks_dir, name))
+
+            i = 0
+            for item in reader:
+                self.strokes.extend(item['drawing'])
+
+                i += 1
+                if i > n_images_by_file:
+                    break
+    
+    def __call__(self, shape, min_stroke_width=8):
+        target_width, target_height = shape
+        n_strokes = int(np.random.normal(5, 1))
+        fig = Figure()
+        canvas = FigureCanvas(fig)
+        ax = fig.gca()
+        ax.axis('off')
+        
+        def central_crop(image, new_width, new_height):
+            image = image.copy()
+
+            width, height = image.size
+
+            left = (width - new_width) / 2
+            top = (height - new_height) / 2
+            right = (width + new_width) / 2
+            bottom = (height + new_height) / 2
+
+            image = image.crop((left, top, right, bottom))
+
+            return image
+                
+        for _ in range(n_strokes):
+            stroke_index = np.random.randint(0, len(self.strokes))
+            stroke_width = np.random.randint(min_stroke_width, min_stroke_width + 2)
+            stroke = self.strokes[stroke_index][:int(len(self.strokes[stroke_index]) * 1)]
+            ax.plot(*stroke, color='black', lw=stroke_width)
+
+        canvas.draw()       # draw the canvas, cache the renderer
+        width, height = fig.get_size_inches() * fig.get_dpi()
+        image = np.frombuffer(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
+        image = Image.fromarray(image)
+
+
+        image = image.resize((int(1.25 * target_width), int(1.25 * target_height)))
+        image = central_crop(image, target_width, target_height)
+        image = image.convert('1')
+        
+        return np.array(image).astype('float32')
 
 class _CelebaDataset(torch.utils.data.Dataset):
-    def __init__(self, input_dir, transform=_check_shape_and_to_numpy):
+    def __init__(self, input_dir, masks_dir, transform=_resize_and_to_numpy):
         self._input = [
             os.path.join(input_dir, x)
-        for x in os.listdir(input_dir)
+            for x in os.listdir(input_dir)
         ]
-        self._transform = transform
+        self._transform = transform or _resize_and_to_numpy
+        self._mask_generator = _MaskGenerator(masks_dir)
+        
 
     def __len__(self):
         return len(self._input)
 
     def __getitem__(self, index):
         img = Image.open(self._input[index])
-        return self._transform((img, _generate_mask(img.size[::-1])))
+        return self._transform((img, self._mask_generator(img.size[::-1])))
 
 
 def _make_default_transform():
     return tv.transforms.Compose([
         _Flipper(),
         _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
-        _check_shape_and_to_numpy,
-tv.transforms.Lambda(lambda x: (x[0] / 255.0, x[1]))
+        _resize_and_to_numpy
     ])
 
 
