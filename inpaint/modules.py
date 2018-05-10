@@ -95,7 +95,7 @@ class InpaintLoss(nn.Module):
         self._style_features_generator = (
             style_features_generator or
             _PretrainedFeaturesGenerator(
-                _VGG.features,
+                _vgg().features,
                 ('4', '9', '16'),
                 # see https://pytorch.org/docs/stable/torchvision/models.html#torchvision-models
                 # for undestanding why these figures

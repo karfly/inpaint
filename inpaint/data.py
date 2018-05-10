@@ -27,9 +27,9 @@ class _Jitter:
 
 def _check_shape_and_to_numpy(x):
     # shape must be sqaure with a side that is power of 2
-    assert x.shape[0] == x.shape[1]
-    assert not math.modf(math.log2(x.shape[0]))[0]
-    return np.array(x).transpose((2, 0, 1)), x[1]
+    assert x[0].size[0] == x[0].size[1]
+    assert not math.modf(math.log2(x[0].size[0]))[0]
+    return np.array(x[0]).transpose((2, 0, 1)), x[1]
 
 
 def _generate_mask(shape):
@@ -40,7 +40,7 @@ class _CelebaDataset(torch.utils.data.Dataset):
     def __init__(self, input_dir, transform=_check_shape_and_to_numpy):
         self._input = [
             os.path.join(input_dir, x)
-            for x in os.listdir(input_dir)
+        for x in os.listdir(input_dir)
         ]
         self._transform = transform
 
@@ -56,7 +56,8 @@ def _make_default_transform():
     return tv.transforms.Compose([
         _Flipper(),
         _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
-        _check_shape_and_to_numpy
+        _check_shape_and_to_numpy,
+tv.transforms.Lambda(lambda x: (x[0] / 255.0, x[1]))
     ])
 
 
