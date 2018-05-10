@@ -99,7 +99,10 @@ class _CelebaDataset(torch.utils.data.Dataset):
             for x in os.listdir(input_dir)
         ]
         self._transform = transform or _resize_and_to_numpy
-        self._mask_generator = _MaskGenerator(masks_dir)
+        if masks_dir is not None:
+            self._mask_generator = _MaskGenerator(masks_dir)
+        else:
+            self._mask_generator = _generate_trivial_mask
         
 
     def __len__(self):
@@ -118,8 +121,8 @@ def _make_default_transform():
     ])
 
 
-def make_dataloader(input_dir, transform='default', *args, **kwargs):
+def make_dataloader(input_dir, masks_dir, transform='default', *args, **kwargs):
     if transform == 'default':
         transform = _make_default_transform()
-    dataset = _CelebaDataset(input_dir, transform)
+    dataset = _CelebaDataset(input_dir, masks_dir, transform)
     return torch.utils.data.DataLoader(dataset, *args, **kwargs)
