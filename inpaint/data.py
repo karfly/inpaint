@@ -47,7 +47,7 @@ class _MaskGenerator:
                 if i > n_images_by_file:
                     break
     
-    def __call_(self, shape, min_stroke_width=8):
+    def __call__(self, shape, min_stroke_width=8):
         target_width, target_height = shape
         n_strokes = int(np.random.normal(5, 1))
         fig = Figure()
