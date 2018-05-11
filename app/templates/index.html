@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <title>Inpainting</title>
+
+    <link rel="stylesheet" href="/static/bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/bower_components/seiyria-bootstrap-slider/dist/css/bootstrap-slider.css">
+
+    <script src="/static/bower_components/jquery/dist/jquery.min.js"></script>
+    {#    <script src="/static/bower_components/popper.js/dist/popper.js"></script>#}
+    {#    <script src="/static/bower_components/bootstrap/dist/js/bootstrap.min.js"></script>#}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+            integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+            crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"
+            integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
+            crossorigin="anonymous"></script>
+
+    <script src="/static/bower_components/seiyria-bootstrap-slider/dist/bootstrap-slider.min.js"></script>
+
+    <style>
+        canvas {
+            max-width: 100%;
+            max-height: 500px;
+        }
+
+        #selWidthSlider .slider-selection {
+            background: #BABABA;
+        }
+
+        .slider {
+            margin: 8px 10px;
+        }
+
+        canvas {
+            border: 1px solid black;
+        }
+
+        label.btn {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body class="bg-dark text-light">
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container" style="justify-content: normal">
+        <a class="navbar-brand" href="#">Inpainting</a>
+        <div style="display: inline-block;">
+            <label id="btn-load" for="file-upload" class="btn btn-secondary">Load image</label>
+            <input type="file" id="file-upload" name="file-upload" style="display: none;"/>
+            <button id="btn-pick-random" class="btn btn-secondary">Pick random</button>
+            <button id="btn-save" class="btn btn-secondary">Save result</button>
+            <a id="save-link" style="display: none;"></a>
+        </div>
+    </div>
+</nav>
+<div class="container">
+    <div class="row" style="margin: 10px 0">
+        <div class="col-md-6">
+            <center>
+                <div style="position:relative; display: inline-block;">
+                    <canvas id="canvas_in" style="z-index: 1;"></canvas>
+                    <canvas id="canvas_mask" height="500" width="500"
+                            style="z-index: 2; position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 6px);"></canvas>
+                </div>
+            </center>
+        </div>
+        <div class="col-md-6">
+            <center>
+                <canvas id="canvas_out"></canvas>
+            </center>
+        </div>
+    </div>
+    <div>
+        <div style="display: inline-block; margin-top: 2px">
+            Brush width
+            <input id="selWidth" data-slider-id='selWidthSlider' type="text" data-slider-min="0" data-slider-max="50"
+                   data-slider-step="1" data-slider-value="10"/>
+        </div>
+        <div class="float-right">
+            <button id="btn-undo" class="btn btn-secondary">Undo</button>
+            <button id="btn-redo" class="btn btn-secondary">Redo</button>
+            <button id="btn-clear" class="btn btn-secondary">Clear</button>
+        </div>
+    </div>
+</div>
+</body>
+
+<script>
+    $(document).ready(function () {
+        $('#selWidth').slider({
+            formatter: function (value) {
+                return 'Current value: ' + value;
+            }
+        });
+
+        $('#file-upload').change(load);
+        $('#btn-pick-random').click(pick_random);
+        $('#btn-save').click(save);
+
+        canvas_in = $('#canvas_in')[0];
+        canvas_out = $('#canvas_out')[0];
+
+        init_draw();
+
+        $('#btn-undo').click(cUndo);
+        $('#btn-redo').click(cRedo);
+        $('#btn-clear').click(cClear);
+    });
+
+    function load(e) {
+        var ctx_in = canvas_in.getContext('2d');
+        var ctx_out = canvas_out.getContext('2d');
+
+        var reader = new FileReader();
+        reader.onload = function (event) {
+            var img = new Image();
+            img.onload = function () {
+                canvas_in.width = img.width;
+                canvas_in.height = img.height;
+                ctx_in.drawImage(img, 0, 0);
+
+                canvas_out.width = img.width;
+                canvas_out.height = img.height;
+                ctx_out.drawImage(img, 0, 0);
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(e.target.files[0]);
+        cClear();
+    }
+
+    function pick_random() {
+        var ctx_in = canvas_in.getContext('2d');
+        var ctx_out = canvas_out.getContext('2d');
+
+        var img = new Image;
+        img.onload = function () {
+            canvas_in.width = img.width;
+            canvas_in.height = img.height;
+            ctx_in.drawImage(img, 0, 0);
+
+            canvas_out.width = img.width;
+            canvas_out.height = img.height;
+            ctx_out.drawImage(img, 0, 0);
+        };
+        img.src = '/pick_random?dummy=' + Date.now().toString();
+        cClear();
+    }
+
+    function save() {
+        var canvas = $('#canvas_out')[0];
+        var save_link = $('#save-link')[0];
+        save_link.href = canvas.toDataURL('image/png');
+        save_link.download = 'output.png';
+        save_link.click();
+    }
+
+    var mousePressed = false;
+    var lastX, lastY;
+    var mask_context;
+
+    function init_draw() {
+        mask_context = document.getElementById('canvas_mask').getContext("2d");
+        var canvas_mask = $('#canvas_mask');
+        canvas_mask.mousedown(function (e) {
+            mousePressed = true;
+            var x_rel = (e.pageX - $(this).offset().left) / this.offsetWidth * 500;
+            var y_rel = (e.pageY - $(this).offset().top) / this.offsetHeight * 500;
+            Draw(x_rel, y_rel, false);
+        });
+
+        canvas_mask.mousemove(function (e) {
+            if (mousePressed) {
+                var x_rel = (e.pageX - $(this).offset().left) / this.offsetWidth * 500;
+                var y_rel = (e.pageY - $(this).offset().top) / this.offsetHeight * 500;
+                Draw(x_rel, y_rel, true);
+            }
+        });
+
+        canvas_mask.mouseup(function (e) {
+            if (mousePressed) {
+                mousePressed = false;
+                cPush();
+                sendToApply();
+            }
+        });
+
+        canvas_mask.mouseleave(function (e) {
+            if (mousePressed) {
+                mousePressed = false;
+                cPush();
+                sendToApply();
+            }
+        });
+    }
+
+    function Draw(x, y, isDown) {
+        if (isDown) {
+            mask_context.beginPath();
+            mask_context.strokeStyle = 'white';
+            mask_context.lineWidth = $('#selWidth').val();
+            mask_context.lineJoin = "round";
+            mask_context.moveTo(lastX, lastY);
+            mask_context.lineTo(x, y);
+            mask_context.closePath();
+            mask_context.stroke();
+        }
+        lastX = x;
+        lastY = y;
+    }
+
+    var cPushArray = [];
+    var cStep = 0;
+
+    function cPush() {
+        cStep++;
+        if (cStep < cPushArray.length) {
+            cPushArray.length = cStep;
+        }
+        cPushArray.push(document.getElementById('canvas_mask').toDataURL());
+    }
+
+    function cUndo() {
+        if (cStep > 0) {
+            cStep--;
+            var canvas = $('#canvas_mask')[0];
+            var canvasPic = new Image();
+            canvasPic.src = cPushArray[cStep];
+            canvasPic.onload = function () {
+                mask_context.clearRect(0, 0, canvas.width, canvas.height);
+                mask_context.drawImage(canvasPic, 0, 0);
+            };
+        }
+    }
+
+    function cRedo() {
+        if (cStep < cPushArray.length - 1) {
+            cStep++;
+            var canvas = $('#canvas_mask')[0];
+            var canvasPic = new Image();
+            canvasPic.src = cPushArray[cStep];
+            canvasPic.onload = function () {
+                mask_context.clearRect(0, 0, canvas.width, canvas.height);
+                mask_context.drawImage(canvasPic, 0, 0);
+            };
+        }
+    }
+
+    function cClear() {
+        var canvas = $('#canvas_mask')[0];
+        mask_context.clearRect(0, 0, canvas.width, canvas.height);
+
+        cPushArray = [];
+        cStep = 0;
+
+        cPush();
+    }
+
+    function sendToApply() {
+        $.ajax({
+            url: '/apply',
+            type: 'post',
+            data: {
+                'image': document.getElementById('canvas_in').toDataURL(),
+                'mask': document.getElementById('canvas_mask').toDataURL()
+            },
+            success: function (data) {
+                var canvas = $('#canvas_out')[0];
+                var out_context = canvas.getContext("2d");
+
+                var canvasPic = new Image();
+                canvasPic.src = 'data:image/png;base64,' + data;
+                canvasPic.onload = function () {
+                    out_context.clearRect(0, 0, canvas.width, canvas.height);
+                    out_context.drawImage(canvasPic, 0, 0);
+                };
+            }
+        });
+    }
+</script>
+</html>
