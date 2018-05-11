@@ -1,3 +1,4 @@
+import math
 import os
 
 import numpy as np
@@ -27,11 +28,14 @@ class _Jitter:
         return self._jitter(x[0]), x[1]
 
 
-def _resize_and_to_numpy(x):
-    return np.array(x[0].resize((256, 256))).transpose((2, 0, 1)), x[1]
+def _final_transform(x):
+    # shape must be sqaure with a side that is power of 2
+    assert x[0].size[0] == x[0].size[1]
+    assert not math.modf(math.log2(x[0].size[0]))[0]
+    return np.array(x[0], dtype=np.float32).transpose((2, 0, 1)) / 255.0, x[1]
 
 
-def _generate_trivial_mask(shape):
+def _generate_random_mask(shape):
 #     return np.ones(shape, dtype=np.float32)
     return (np.random.rand(*shape) > 0.2).astype('float32')
 
@@ -92,17 +96,18 @@ class _MaskGenerator:
         
         return np.array(image).astype('float32')
 
+
 class _CelebaDataset(torch.utils.data.Dataset):
-    def __init__(self, input_dir, masks_dir, transform=_resize_and_to_numpy):
+    def __init__(self, input_dir, masks_dir, transform=_final_transform):
         self._input = [
             os.path.join(input_dir, x)
             for x in os.listdir(input_dir)
         ]
-        self._transform = transform or _resize_and_to_numpy
+        self._transform = transform
         if masks_dir is not None:
             self._mask_generator = _MaskGenerator(masks_dir)
         else:
-            self._mask_generator = _generate_trivial_mask
+            self._mask_generator = _generate_random_mask
         
 
     def __len__(self):
@@ -115,10 +120,9 @@ class _CelebaDataset(torch.utils.data.Dataset):
 
 def _make_default_transform():
     return tv.transforms.Compose([
-#         _Flipper(),
-#         _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
-        _resize_and_to_numpy,
-        tv.transforms.Lambda(lambda batch: (batch[0] / 255.0, batch[1]))
+        _Flipper(),
+        _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
+        _final_transform
     ])
 
 

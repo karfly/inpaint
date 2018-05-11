@@ -69,8 +69,14 @@ class Normalization(nn.Module):
         # .view the mean and std to make them [C x 1 x 1] so that they can
         # directly work with image Tensor of shape [B x C x H x W].
         # B is batch size. C is number of channels. H is height and W is width.
-        self.mean = nn.Parameter(torch.tensor(mean).view(-1, 1, 1), requires_grad=False)
-        self.std = nn.Parameter(torch.tensor(std).view(-1, 1, 1), requires_grad=False)
+        self.mean = nn.Parameter(
+            torch.tensor(mean, dtype=torch.float32).view(-1, 1, 1),
+            requires_grad=False
+        )
+        self.std = nn.Parameter(
+            torch.tensor(std, dtype=torch.float32).view(-1, 1, 1),
+            requires_grad=False
+        )
 
     def forward(self, img):
         # normalize img
@@ -79,15 +85,6 @@ class Normalization(nn.Module):
 
 def _calculate_gram_matrices(features):
     return [x.matmul(x.transpose(-2, -1)) for x in features]
-
-
-# def _make_normalizer(feature_count, means, stds):
-#     x = nn.BatchNorm2d(feature_count, affine=False)
-#     x.weight = nn.Parameter(torch.tensor(means))
-#     x.bias = nn.Parameter(torch.tensor(stds) ** 2)
-#     x.weight.requires_grad_(False)
-#     x.bias.requires_grad_(False)
-#     return x
 
 
 class InpaintLoss(nn.Module):
@@ -118,7 +115,9 @@ class InpaintLoss(nn.Module):
         )
 
     def forward(self, out, mask, gt):
-        loss = torch.tensor(0, dtype=torch.float32, requires_grad=True).to(out.device)
+        loss = torch.tensor(
+            0, dtype=torch.float32, device=out.device, requires_grad=True
+        )
 
         loss = loss + self._valid_coef * F.l1_loss(mask * out, mask * gt)
         reversed_mask = 1 - mask
