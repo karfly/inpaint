@@ -138,6 +138,25 @@ def _make_default_transform():
 
 
 def make_dataloader(input_dir, masks_dir, transform='default', *args, **kwargs):
+    """Make data loader: input images and generated masks.
+
+    Parameters
+    ----------
+    input_dir : str
+        path to the folder containing input images (CelebaDataset HQ)
+
+    masks_dir : str
+        path to the folder containing simple images (to generate masks from) in .ndjson format (Quick Draw Dataset)
+        (https://github.com/googlecreativelab/quickdraw-dataset)
+
+    transform : str
+        type of data augmentation. currently supported types: "default"
+
+    Returns
+    -------
+    data_loader : DataLoader
+        data loader yielding input (transformed) image and generated mask
+    """
     if transform == 'default':
         transform = _make_default_transform()
     dataset = _CelebaDataset(input_dir, masks_dir, transform)
