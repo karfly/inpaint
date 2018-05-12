@@ -1,5 +1,9 @@
 # Deep image inpainting
 
+Solarized dark             |  Solarized Ocean          |  Solarized Ocean
+:-------------------------:|:-------------------------:|:-------------------------
+![](https://github.com/karfly/inpaint/tree/master/app/static/sample_result/original.png)  |  ![](https://github.com/karfly/inpaint/tree/master/app/static/sample_result/corrupted.png) |  ![](https://github.com/karfly/inpaint/tree/master/app/static/sample_result/restored.png)
+
 As our final LSML project we decided to create online AI-tool for image correction using **inpainting**. There are a lot of works where this problem is solved with Deep Learning. We took [this fresh paper](https://arxiv.org/abs/1804.07723) by NVidia researches as a base because they archived very spectacular results and can deservedly be considered a state-of-the-art right now.
 
 We thought it would be interesting to apply this tool for face correction, so used [CelebA dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) for learning. But in the original dataset there are a lot of low-quality images, that's why we finally used [CelebA-HQ dataset](https://arxiv.org/abs/1710.10196).

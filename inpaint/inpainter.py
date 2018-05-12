@@ -5,13 +5,24 @@ from .module import InpaintNet
 
 
 class Inpainter:
-    def __init__(self, model=None):
+    def __init__(self, model=None, device='cpu'):
         self._model = model
+        self.set_device(device)
 
     def __call__(self, img, mask):
         if self._model:
-            restored_img, _ = self._model(img, mask)
-            restored_img = restored_img.to('cpu').data.numpy()
+            tensor_img = torch.tensor(
+                np.expand_dims(img, axis=0),
+                dtype=torch.float32,
+                device=self._device
+            )
+            tensor_mask = torch.tensor(
+                np.expand_dims(mask, axis=0),
+                dtype=torch.float32,
+                device=self._device
+            )
+            restored_img, _ = self._model(tensor_img, tensor_mask)
+            restored_img = restored_img.to('cpu').data.numpy()[0]
             restored_img = np.where(mask, img, restored_img)
             restored_img = np.clip(restored_img, 0, 1)
         else:
@@ -20,6 +31,7 @@ class Inpainter:
         return restored_img
 
     def set_device(self, device):
+        self._device = device
         if self._model:
             self._model.to(device)
 
