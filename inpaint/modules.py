@@ -149,6 +149,6 @@ class InpaintLoss(nn.Module):
             _style_loss(comp_gram_matrices, gt_gram_matrices, coefs)
         )
 
-        loss = loss + self._tv_coef * _tv_loss(comp, mask)
+        loss = loss + self._tv_coef * _tv_loss(comp, reversed_mask)
 
         return loss
