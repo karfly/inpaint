@@ -5,11 +5,14 @@ from .module import InpaintNet
 
 
 class Inpainter:
+    """InpaintNet Wrapper."""
+
     def __init__(self, model=None, device='cpu'):
         self._model = model
         self.set_device(device)
 
     def __call__(self, img, mask):
+        """Restore image with a hole."""
         if self._model:
             tensor_img = torch.tensor(
                 np.expand_dims(img, axis=0),
@@ -37,6 +40,18 @@ class Inpainter:
 
 
 def make_inpainter(state_dict_path=None):
+    """Make an instance of Inpainter.
+
+    Parameters
+    ----------
+    state_dict_path : str
+        path to the model dictionary (use to load pretrained model)
+
+    Returns
+    -------
+    inpainter_model : Inpainter
+        Image Inpainting Network
+    """
     if state_dict_path:
         model = InpaintNet()
         model.load_state_dict(

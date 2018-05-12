@@ -115,6 +115,23 @@ class InpaintLoss(nn.Module):
         )
 
     def forward(self, out, mask, gt):
+        """Do forward pass.
+
+        Parameters
+        ----------
+        out : FloatTensor
+            network output of shape (b, c, h, w)
+
+        mask : FloatTensor
+            binary mask tensor of shape (b, c, h, w)
+
+        gt : FloatTensor
+            ground truth of shape (b, c, h, w)
+
+        Returns
+        -------
+        loss : FloatTensor
+        """
         loss = torch.tensor(
             0, dtype=torch.float32, device=out.device, requires_grad=True
         )
@@ -319,6 +336,8 @@ class _InpaintUpBlock(nn.Module):
 
 
 class InpaintNet(nn.Module):
+    """ Image Inpainting Network (https://arxiv.org/abs/1804.07723)"""
+
     def __init__(self, in_channels=3, out_channels=3):
         super().__init__()
 
