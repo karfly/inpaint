@@ -1,13 +1,17 @@
 # Deep image inpainting
 
-#### Original
+Original |  Corrupted | Restored
+:-------------------------:|:-------------------------:
+<img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="256"> | <img src="https://github.com/karfly/inpaint/blob/master/readme/corrupted.png" width="256"> | <img src="https://github.com/karfly/inpaint/blob/master/readme/restored.png" width="256">
+
+<!-- #### Original
 <img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="256">
 
 #### Corrupted
 <img src="https://github.com/karfly/inpaint/blob/master/readme/corrupted.png" width="256">
 
 #### Restored
-<img src="https://github.com/karfly/inpaint/blob/master/readme/restored.png" width="256">
+<img src="https://github.com/karfly/inpaint/blob/master/readme/restored.png" width="256"> -->
 
 As our final LSML project we decided to create online AI-tool for image correction using **inpainting**. There are a lot of works where this problem is solved with Deep Learning. We took [this fresh paper](https://arxiv.org/abs/1804.07723) by NVidia researches as a base because they archived very spectacular results and can deservedly be considered a state-of-the-art right now.
 
