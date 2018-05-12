@@ -1,3 +1,5 @@
+Flask=1.0.2
+gunicorn==19.8.1
 ipython==6.3.1
 jsonlines==1.2.0
 jupyterlab==0.32.1

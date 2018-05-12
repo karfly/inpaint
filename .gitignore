@@ -10,8 +10,10 @@ __pycache__/
 .Python
 env/
 build/
+!app/static/bower_components/**/build
 develop-eggs/
 dist/
+!app/static/bower_components/**/dist
 downloads/
 eggs/
 .eggs/
@@ -20,6 +22,7 @@ lib64/
 parts/
 sdist/
 var/
+!app/static/bower_components/**/var
 wheels/
 *.egg-info/
 .installed.cfg
