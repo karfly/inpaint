@@ -20,9 +20,15 @@ The fastest way to start playing with the demo is (requires [Docker](https://www
 <visit localhost:8003 in your favourite browser>
 ```
 
-If you want to explore the project more deeply, here are some notes:
-- 
+Current limitations:
+- photos must have resolution 256x256
+- photos must be similar to ones from CelebA-HQ dataset
 
+If you want to explore the project more deeply, here are some notes:
+- the project supports only Python 3
+- all the dependencies are listed in `requirements.txt`
+- a well-documented interface of the main library (with the original model and the loss used when training) is in `inpaint/__init__.py`
+- to run the app locally see the example of a command in app/run.sh and the documentation of the function `setup_app` in `app/app.py`
 
 ## Contributors
 - [Ivan Golovanov](https://github.com/legendawes) - frontend, backend, mask generation, research.
