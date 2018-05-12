@@ -103,6 +103,9 @@ ENV/
 # mypy
 .mypy_cache/
 
+# pytorch
+*.state_dict
+
 # Visual Studio Code
 .vscode
 
