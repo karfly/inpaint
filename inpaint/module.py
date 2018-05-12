@@ -63,9 +63,9 @@ class _PretrainedFeaturesGenerator(nn.Module):
         return output
     
 
-class Normalization(nn.Module):
+class _Normalization(nn.Module):
     def __init__(self, mean, std):
-        super(Normalization, self).__init__()
+        super(_Normalization, self).__init__()
         # .view the mean and std to make them [C x 1 x 1] so that they can
         # directly work with image Tensor of shape [B x C x H x W].
         # B is batch size. C is number of channels. H is height and W is width.
@@ -110,7 +110,7 @@ class InpaintLoss(nn.Module):
                 ('4', '9', '16'),
                 # see https://pytorch.org/docs/stable/torchvision/models.html#torchvision-models
                 # for undestanding why these figures
-                Normalization([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                _Normalization([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             )
         )
 
@@ -152,3 +152,8 @@ class InpaintLoss(nn.Module):
         loss = loss + self._tv_coef * _tv_loss(comp, reversed_mask)
 
         return loss
+
+
+class InpaintModule(nn.Module):
+    def forward(self, img, mask):
+        return img, mask

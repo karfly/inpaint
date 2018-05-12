@@ -10,6 +10,7 @@ import jsonlines
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
+
 class _Flipper:
     def __init__(self, p=0.5):
         self._p = p
@@ -63,7 +64,7 @@ class _MaskGenerator:
         canvas = FigureCanvas(fig)
         ax = fig.gca()
         ax.axis('off')
-        
+
         def central_crop(image, new_width, new_height):
             image = image.copy()
 
@@ -77,7 +78,7 @@ class _MaskGenerator:
             image = image.crop((left, top, right, bottom))
 
             return image
-                
+
         for _ in range(n_strokes):
             stroke_index = np.random.randint(0, len(self.strokes))
             stroke_width = np.random.randint(min_stroke_width, min_stroke_width + 2)
