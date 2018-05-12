@@ -1,10 +1,11 @@
-Flask=1.0.2
+Flask==1.0.2
 gunicorn==19.8.1
 ipython==6.3.1
 jsonlines==1.2.0
 jupyterlab==0.32.1
 matplotlib==2.2.2
 numpy==1.14.3
+Pillow==5.1.0
 pycodestyle==2.4.0
 torch==0.4.0
 torchvision==0.2.1
