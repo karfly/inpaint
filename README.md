@@ -13,10 +13,10 @@ Finally we faced a challenge to create pretty web-page to allow people to use ou
 ## Usage
 The fastest way to start playing with the demo is (requires [Docker](https://www.docker.com/)):
 ```
-git clone https://github.com/karfly/inpaint
-cd inpaint
-docker build -t inpaint_image .
-
+>>> git clone https://github.com/karfly/inpaint
+>>> cd inpaint
+>>> docker build -t inpaint_image .
+>>> ./run.sh
 ```
 
 
