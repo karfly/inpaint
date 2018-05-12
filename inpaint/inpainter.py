@@ -1,6 +1,6 @@
 import torch
 
-from .module import InpaintModule
+from .module import InpaintNet
 
 
 class Inpainter:
@@ -17,7 +17,7 @@ class Inpainter:
 
 def make_inpainter(state_dict_path=None):
     if state_dict_path:
-        model = InpaintModule()
+        model = InpaintNet()
         model.load_state_dict(torch.load(state_dict_path))
     else:
         model = None

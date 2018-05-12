@@ -36,8 +36,11 @@ def _final_transform(x):
     return np.array(x[0], dtype=np.float32).transpose((2, 0, 1)) / 255.0, x[1]
 
 
+def _generate_dummy_mask(shape):
+    return np.ones(shape, dtype=np.float32)
+
+
 def _generate_random_mask(shape):
-#     return np.ones(shape, dtype=np.float32)
     return (np.random.rand(*shape) > 0.2).astype('float32')
 
 
@@ -56,7 +59,7 @@ class _MaskGenerator:
                 i += 1
                 if i > n_images_by_file:
                     break
-    
+
     def __call__(self, shape, min_stroke_width=8):
         target_width, target_height = shape
         n_strokes = int(np.random.normal(5, 1))
@@ -81,20 +84,28 @@ class _MaskGenerator:
 
         for _ in range(n_strokes):
             stroke_index = np.random.randint(0, len(self.strokes))
-            stroke_width = np.random.randint(min_stroke_width, min_stroke_width + 2)
-            stroke = self.strokes[stroke_index][:int(len(self.strokes[stroke_index]) * 1)]
+            stroke_width = np.random.randint(
+                min_stroke_width, min_stroke_width + 2
+            )
+            stroke = self.strokes[stroke_index][
+                :int(len(self.strokes[stroke_index]) * 1)
+            ]
             ax.plot(*stroke, color='black', lw=stroke_width)
 
         canvas.draw()       # draw the canvas, cache the renderer
         width, height = fig.get_size_inches() * fig.get_dpi()
-        image = np.frombuffer(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
+        image = np.frombuffer(
+            canvas.tostring_rgb(),
+            dtype='uint8'
+        ).reshape(int(height), int(width), 3)
         image = Image.fromarray(image)
 
-
-        image = image.resize((int(1.25 * target_width), int(1.25 * target_height)))
+        image = image.resize(
+            (int(1.25 * target_width), int(1.25 * target_height))
+        )
         image = central_crop(image, target_width, target_height)
         image = image.convert('1')
-        
+
         return np.array(image).astype('float32')
 
 
@@ -109,7 +120,6 @@ class _CelebaDataset(torch.utils.data.Dataset):
             self._mask_generator = _MaskGenerator(masks_dir)
         else:
             self._mask_generator = _generate_random_mask
-        
 
     def __len__(self):
         return len(self._input)

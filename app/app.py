@@ -58,7 +58,6 @@ def apply():
 def pick_random():
     images = os.listdir(RANDOM_IMAGES_DIR)
     img_name = random.choice(images)
-    print(img_name, os.path.exists(os.path.join(RANDOM_IMAGES_DIR, img_name)))
     return send_file(os.path.join(RANDOM_IMAGES_DIR, img_name))
 
 

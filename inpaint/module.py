@@ -61,7 +61,7 @@ class _PretrainedFeaturesGenerator(nn.Module):
                 output.append(x.view(*x.shape[:2], -1) if self._reshape else x)
                 layers.remove(layer)
         return output
-    
+
 
 class _Normalization(nn.Module):
     def __init__(self, mean, std):
@@ -154,6 +154,213 @@ class InpaintLoss(nn.Module):
         return loss
 
 
-class InpaintModule(nn.Module):
-    def forward(self, img, mask):
-        return img, mask
+class _PartialConv2d(nn.Module):
+    """Partial convolution layer (https://arxiv.org/abs/1804.07723)."""
+
+    def __init__(
+        self, in_channels, out_channels, kernel_size, stride=1, padding=0
+    ):
+        super().__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+
+        self.conv = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride=stride,
+            padding=padding,
+            bias=False
+        )
+        self.conv_bias = nn.Parameter(
+            torch.zeros(out_channels), requires_grad=True
+        )
+
+        self.sum_conv = nn.Conv2d(
+            in_channels,
+            1,
+            kernel_size,
+            stride=stride,
+            padding=padding,
+            bias=False
+        )
+        self.sum_conv.weight.data.fill_(1)
+        self.sum_conv.weight.requires_grad_(False)
+
+    def forward(self, x, mask):
+        """Do forward pass.
+
+        Parameters
+        ----------
+        x : FloatTensor
+            input feature tensor of shape (b, c, h, w)
+
+        mask : FloatTensor
+            binary mask tensor of shape (b, c, h, w)
+
+        Returns
+        -------
+        x : FloatTensor
+        updated_mask : FloatTensor
+        """
+        assert x.shape == mask.shape, 'x and mask shapes must be equal'
+
+        x_masked = x * mask
+        x_after_conv = self.conv(x_masked)
+
+        x_after_conv_normed = x_after_conv  # no norm
+        # x_after_conv_normed = torch.where(
+        #     mask_norm != 0,
+        #     x_after_conv / mask_norm,
+        #     torch.zeros_like(x_after_conv)
+        # )
+        x_after_conv_normed += self.conv_bias.view(1, -1, 1, 1)
+
+        updated_mask_single = (self.sum_conv(mask) > 0).type(torch.float32)
+        updated_mask = torch.cat(
+            [updated_mask_single] * self.out_channels, dim=1
+        )
+        updated_mask.to(mask.device)
+
+        return x_after_conv_normed, updated_mask
+
+
+class _InpaintDownBlock(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=2,
+        padding='same',
+        bn=True
+    ):
+        super().__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+
+        padding = (kernel_size - 1) // 2 if padding == 'same' else padding
+        self.padding = padding
+
+        self.bn = bn
+
+        self.pconv = _PartialConv2d(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride=stride,
+            padding=padding
+        )
+        if bn:
+            self.bn = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x, mask):
+        x, mask = self.pconv(x, mask)
+        if self.bn:
+            x = self.bn(x)
+        x = self.relu(x)
+
+        return x, mask
+
+
+class _InpaintUpBlock(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        in_channels_bridge,
+        out_channels,
+        kernel_size,
+        padding='same',
+        bn=True
+    ):
+        super().__init__()
+
+        self.in_channels = in_channels
+        self.in_channels_bridge = in_channels_bridge
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+
+        padding = (kernel_size - 1) // 2 if padding == 'same' else padding
+        self.padding = padding
+
+        self.bn = bn
+        # TODO: align corners!
+        self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
+
+        self.pconv = _PartialConv2d(
+            in_channels + in_channels_bridge,
+            out_channels,
+            kernel_size,
+            padding=padding
+        )
+        if bn:
+            self.bn = nn.BatchNorm2d(out_channels)
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
+
+    def forward(self, x, mask, x_bridge, mask_bridge):
+        x, mask = self.upsample(x), self.upsample(mask)
+        torch.cat([mask, mask_bridge], dim=1)
+        x = torch.cat([x, x_bridge], dim=1)
+        mask = torch.cat([mask, mask_bridge], dim=1)
+
+        x, mask = self.pconv(x, mask)
+
+        if self.bn:
+            x = self.bn(x)
+        x = self.leaky_relu(x)
+
+        return x, mask
+
+
+class InpaintNet(nn.Module):
+    def __init__(self, in_channels=3, out_channels=3):
+        super().__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        # down
+        self.down_blocks = nn.ModuleList([
+            _InpaintDownBlock(
+                in_channels, 64, 7, stride=2, padding='same', bn=False
+            ),
+            _InpaintDownBlock(64, 128, 5, stride=2, padding='same', bn=False),
+            _InpaintDownBlock(128, 256, 5, stride=2, padding='same', bn=False),
+            _InpaintDownBlock(256, 512, 3, stride=2, padding='same', bn=False),
+            _InpaintDownBlock(512, 512, 3, stride=2, padding='same', bn=False),
+            _InpaintDownBlock(512, 512, 3, stride=2, padding='same', bn=False),
+            _InpaintDownBlock(512, 512, 3, stride=2, padding='same', bn=False),
+        ])
+        self.depth = len(self.down_blocks)
+
+        # up
+        self.up_blocks = nn.ModuleList([
+            _InpaintUpBlock(512, 512, 512, 3, padding='same', bn=False),
+            _InpaintUpBlock(512, 512, 512, 3, padding='same', bn=False),
+            _InpaintUpBlock(512, 512, 512, 3, padding='same', bn=False),
+            _InpaintUpBlock(512, 256, 256, 3, padding='same', bn=False),
+            _InpaintUpBlock(256, 128, 128, 3, padding='same', bn=False),
+            _InpaintUpBlock(128, 64, 64, 3, padding='same', bn=False),
+            _InpaintUpBlock(64, 3, 3, 3, padding='same', bn=False)
+        ])
+
+    def forward(self, x, mask):
+        x_bridges, mask_bridges = [], []
+        for i in range(self.depth):
+            x_bridges.append(x)
+            mask_bridges.append(mask)
+            x, mask = self.down_blocks[i](x, mask)
+
+        for i in range(self.depth):
+            x, mask = self.up_blocks[i](
+                x, mask, x_bridges[-i - 1], mask_bridges[-i - 1]
+            )
+
+        return x, mask
