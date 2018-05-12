@@ -17,7 +17,11 @@ The fastest way to start playing with the demo is (requires [Docker](https://www
 >>> cd inpaint
 >>> docker build -t inpaint_image .
 >>> ./run.sh
+<visit localhost:8003 in your favourite browser>
 ```
+
+If you want to explore the project more deeply, here are some notes:
+- 
 
 
 ## Contributors
