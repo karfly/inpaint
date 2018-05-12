@@ -306,7 +306,6 @@ class _InpaintUpBlock(nn.Module):
 
     def forward(self, x, mask, x_bridge, mask_bridge):
         x, mask = self.upsample(x), self.upsample(mask)
-        torch.cat([mask, mask_bridge], dim=1)
         x = torch.cat([x, x_bridge], dim=1)
         mask = torch.cat([mask, mask_bridge], dim=1)
 
