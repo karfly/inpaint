@@ -16,6 +16,9 @@ Finally we faced a challenge to create pretty web-page to allow people to use ou
 #### Restored
 <img src="https://github.com/karfly/inpaint/blob/master/readme/restored.png" width="128">
 
+<img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="128"> <img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="128"> <img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="128">
+<!-- ![alt-text-1](image1.png "title-1") ![alt-text-2](image2.png "title-2") -->
+
 ## Run
 
 
