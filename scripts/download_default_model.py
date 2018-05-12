@@ -2,8 +2,7 @@
 import argparse
 import urllib.request
 
-
-URL = 'https://www.dropbox.com/s/2bsem24zj8mw66k/default_model.state_dict?dl=1'
+DEFAULT_URL = 'https://www.dropbox.com/s/9dode7w7y0y23rt/model_no_sigmoid_lr_31.pth?dl=1'
 DEFAULT_PATH = 'default_model.state_dict'
 
 
@@ -15,8 +14,10 @@ def download(url, file_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--path', default=DEFAULT_PATH)
+    parser.add_argument('-u', '--url', default=DEFAULT_URL)
+
     args = parser.parse_args()
-    download(URL, args.path)
+    download(args.url, args.path)
 
 
 if __name__ == '__main__':
