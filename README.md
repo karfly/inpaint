@@ -10,10 +10,17 @@ Finally we faced a challenge to create pretty web-page to allow people to use ou
 ##### From left to right: original & corrupted & restored
 <img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="256"> <img src="https://github.com/karfly/inpaint/blob/master/readme/corrupted.png" width="256"> <img src="https://github.com/karfly/inpaint/blob/master/readme/restored.png" width="256">
 
-## Run
+## Usage
+The fastest way to start playing with the demo is (requires [Docker](https://www.docker.com/)):
+```
+git clone https://github.com/karfly/inpaint
+cd inpaint
+docker build -t inpaint_image .
+
+```
 
 
-## Contributiors
+## Contributors
 - [Ivan Golovanov](https://github.com/legendawes) - frontend, backend, mask generation, research.
 - [Yury Gorishniy](https://github.com/StrausMG) - backend, data manipulation, inpaint loss.
 - [Karim Iskakov](https://github.com/karfly) - model training, mask generation, CelebA-HQ generation.
