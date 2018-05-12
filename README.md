@@ -7,17 +7,7 @@ We thought it would be interesting to apply this tool for face correction, so us
 
 Finally we faced a challenge to create pretty web-page to allow people to use our tool online. You can try it [here](https://github.com/karfly/inpaint).
 
-#### Original
-<img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="128">
-
-#### Corrupted
-<img src="https://github.com/karfly/inpaint/blob/master/readme/corrupted.png" width="128">
-
-#### Restored
-<img src="https://github.com/karfly/inpaint/blob/master/readme/restored.png" width="128">
-
-<img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="128"> <img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="128"> <img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="128">
-<!-- ![alt-text-1](image1.png "title-1") ![alt-text-2](image2.png "title-2") -->
+<img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="256"> <img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="256"> <img src="https://github.com/karfly/inpaint/blob/master/readme/original.png" width="256">
 
 ## Run
 
