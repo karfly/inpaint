@@ -15,4 +15,4 @@ RUN python3 ./scripts/download_default_model.py --url https://www.dropbox.com/s/
 EXPOSE 8003
 
 WORKDIR /inpaint/app
-CMD ["gunicorn", "app:setup_app('static/models/model.state_dict')", "-b", "0.0.0.0:8003", "-w", "2"]
+CMD ["gunicorn", "app:setup_app('static/models/model.state_dict')", "-b", "0.0.0.0:8003", "-w", "8"]
