@@ -3,7 +3,7 @@ FROM ubuntu:xenial
 ENV MODEL_URL https://www.dropbox.com/s/gb0yamqa6cnoomy/model_no_sigmoid_lr_all_50.pth?dl=1
 
 RUN apt-get update && apt-get install -y \
-        python3 python3-dev python3-pip
+        wget python3 python3-dev python3-pip
 
 RUN pip3 install --upgrade pip
 RUN pip3 install Flask==1.0.2 \
