@@ -1,27 +1,28 @@
 #!/usr/bin/env python3
-
 import argparse
 import base64
 import io
 import os
-import sys
 import random
+import sys
+from io import BytesIO
 
 import numpy as np
 from PIL import Image
-from flask import Flask, flash, render_template, redirect, request, send_file
+from flask import Flask, render_template, request, send_file, session, jsonify
+
+from data import Storage
 
 sys.path.append('..')
 from inpaint import make_inpainter
-
 
 STATIC_DIR = 'static'
 RANDOM_IMAGES_DIR = None
 DEFAULT_RANDOM_IMAGES_DIR = os.path.join(STATIC_DIR, 'random_images')
 INPAINTER = None
 
-
 app = Flask(__name__)
+app.secret_key = 'super secret key 228'
 
 
 def setup_app(
@@ -56,31 +57,24 @@ def setup_app(
     return app
 
 
-def extract_image(request, field_name, new_shape=None):
-    encoded_image = request.form[field_name][22:]
-    image = Image.open(io.BytesIO(base64.b64decode(encoded_image)))
+def extract_image(image_bytes, new_shape=None):
+    image = Image.open(BytesIO(image_bytes))
     if new_shape:
         image = image.resize(new_shape)
     # np.array(encoded_image) has 4 canals, the last one is not needed
-    return np.array(image)[:, :, :-1].transpose((2, 0, 1)) / 255.0
+    return np.array(image, dtype='uint8')[:, :, :-1].transpose((2, 0, 1))
 
 
 def prepare_result_image(image):
-    image = Image.fromarray(
-        (image.transpose((1, 2, 0)) * 255.0).astype(np.uint8)
-    )
+    image = Image.fromarray((image.transpose((1, 2, 0)) * 255.0).astype(np.uint8))
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue())
+    return base64.b64encode(buffered.getvalue()).decode('utf8')
 
 
-@app.route('/apply', methods=['POST'])
-def apply():
-    image = extract_image(request, 'image')
-    reversed_mask = extract_image(request, 'mask', image.shape[1:])
-    mask = np.where(reversed_mask, 0, 1).astype(np.float32)
-    restored_image = INPAINTER(np.where(mask, image, 0), mask)
-    return prepare_result_image(restored_image)
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
 @app.route('/pick_random')
@@ -90,9 +84,35 @@ def pick_random():
     return send_file(os.path.join(RANDOM_IMAGES_DIR, img_name))
 
 
-@app.route('/')
-def hello_world():
-    return render_template('index.html')
+@app.route('/add_image', methods=['POST'])
+def add_image():
+    image = extract_image(request.files['image'].read(), (256, 256))
+    image_id = Storage().save_image(image)
+    session['image_id'] = str(image_id)
+    return jsonify({
+        'image_id': image_id
+    })
+
+
+@app.route('/apply_mask', methods=['POST'])
+def apply_mask():
+    storage = Storage()
+
+    image_id = session["image_id"]
+    step_id = int(request.form['step_id'])
+
+    image = storage.get_image_by_id(image_id).astype(np.float32)
+    reversed_mask = extract_image(request.files['mask'].read(), image.shape[1:])
+    mask = np.where(reversed_mask, 0, 1).astype(np.float32)
+    result = INPAINTER(np.where(mask, image, 0) / 255., mask)
+
+    storage.save_mask_and_result(image_id, step_id, mask, result)
+    image_base64 = prepare_result_image(result)
+    return jsonify({
+        'image_id': image_id,
+        'step_id': step_id,
+        'result': image_base64
+    })
 
 
 def main():

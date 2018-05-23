@@ -10,16 +10,14 @@
     <link rel="stylesheet" href="/static/bower_components/seiyria-bootstrap-slider/dist/css/bootstrap-slider.css">
 
     <script src="/static/bower_components/jquery/dist/jquery.min.js"></script>
-    {#    <script src="/static/bower_components/popper.js/dist/popper.js"></script>#}
-    {#    <script src="/static/bower_components/bootstrap/dist/js/bootstrap.min.js"></script>#}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
             integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
             crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"
             integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
             crossorigin="anonymous"></script>
-
     <script src="/static/bower_components/seiyria-bootstrap-slider/dist/bootstrap-slider.min.js"></script>
+    <script src="/static/main.js?version=28"></script>
 
     <style>
         canvas {
@@ -42,45 +40,73 @@
         label.btn {
             margin-bottom: 0;
         }
+
+        #header-buttons > * {
+            margin-bottom: 4px;
+        }
+
+        .btn-load.touch, .btn-pick-random.touch, .btn-save.touch {
+            display: none;
+        }
+
+        @media (max-device-width: 576px) {
+            .btn-load, .btn-pick-random, .btn-save {
+                display: none;
+            }
+
+            .btn-load.touch, .btn-pick-random.touch, .btn-save.touch {
+                display: inline-block;
+            }
+
+            .picture-inner {
+                margin-left: auto !important;
+                margin-right: auto !important;
+                float: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-dark text-light">
 <nav class="navbar navbar-dark bg-dark">
     <div class="container" style="justify-content: normal">
-        <a class="navbar-brand" href="#">Inpainting</a>
-        <div style="display: inline-block;">
-            <label id="btn-load" for="file-upload" class="btn btn-secondary">Load image</label>
+        <div id='header-buttons' style="display: inline-block;">
+            <a id='logo' class="navbar-brand" href="#">Inpainting</a>
             <input type="file" id="file-upload" name="file-upload" style="display: none;"/>
-            <button id="btn-pick-random" class="btn btn-secondary">Pick random</button>
-            <button id="btn-save" class="btn btn-secondary">Save result</button>
+
+            <label for="file-upload" class="btn btn-secondary btn-load">Load image</label>
+            <button class="btn btn-secondary btn-pick-random">Pick random</button>
+            <button class="btn btn-secondary btn-save">Save result</button>
+
+            <label for="file-upload" class="btn btn-secondary btn-load touch">Load</label>
+            <button class="btn btn-secondary btn-pick-random touch">Pick</button>
+            <button class="btn btn-secondary btn-save touch">Save</button>
+
             <a id="save-link" style="display: none;"></a>
         </div>
     </div>
 </nav>
 <div class="container">
     <div class="row" style="margin: 10px 0">
-        <div class="col-md-6">
-            <center>
-                <div style="position:relative; display: inline-block;">
-                    <canvas id="canvas_in" style="z-index: 1;"></canvas>
-                    <canvas id="canvas_mask" height="500" width="500"
-                            style="z-index: 2; position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 6px);"></canvas>
-                </div>
-            </center>
+        <div class="col-sm-6">
+            <div class="picture-inner float-right" style="position:relative; display: inline-block;">
+                <canvas id="canvas-in" height="256" width="500" style="z-index: 1;"></canvas>
+                <canvas id="canvas-mask" height="256" width="256"
+                        style="z-index: 2; position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 6px); cursor: crosshair;"></canvas>
+            </div>
         </div>
-        <div class="col-md-6">
-            <center>
-                <canvas id="canvas_out"></canvas>
-            </center>
+        <div class="col-sm-6">
+            <div class="picture-inner">
+                <canvas id="canvas-out" height="256" width="500"></canvas>
+            </div>
         </div>
     </div>
     <div>
         <div style="display: inline-block; margin-top: 2px">
             Brush width
-            <input id="selWidth" data-slider-id='selWidthSlider' type="text" data-slider-min="15" data-slider-max="25"
-                   data-slider-step="1" data-slider-value="10"/>
+            <input id="sel-width" data-slider-id='selWidthSlider' type="text" data-slider-min="2" data-slider-max="50"
+                   data-slider-step="1" data-slider-value="10" value="10"/>
         </div>
-        <div class="float-right">
+        <div class="picture-inner float-right">
             <button id="btn-undo" class="btn btn-secondary">Undo</button>
             <button id="btn-redo" class="btn btn-secondary">Redo</button>
             <button id="btn-clear" class="btn btn-secondary">Clear</button>
@@ -91,195 +117,98 @@
 
 <script>
     $(document).ready(function () {
-        $('#selWidth').slider({
-            formatter: function (value) {
-                return 'Current value: ' + value;
-            }
+        drawHistory = new History();
+        api = new Api();
+        drawEngine = new DrawEngine($('#canvas-mask'), $('#canvas-out'), $('#sel-width'));
+
+        var in_object = $('#canvas-in')[0];
+        var mask_object = $('#canvas-mask')[0];
+        var out_object = $('#canvas-out')[0];
+
+        $('#sel-width').slider();
+        $('#sel-width').change(function () {
+            drawEngine.width = this.value;
         });
 
-        $('#file-upload').change(load);
-        $('#btn-pick-random').click(pick_random);
-        $('#btn-save').click(save);
+        // top buttons
+        $('.file-upload').change(function (e) {
+            blobToImage(e.target.files[0], function (img) {
+                applyInitialState(in_object, mask_object, out_object, img)
+            });
 
-        canvas_in = $('#canvas_in')[0];
-        canvas_out = $('#canvas_out')[0];
+        });
+        $('.btn-pick-random').click(function () {
+            dataURIToImage('/pick_random?dummy=' + Date.now().toString(), function (img) {
+                applyInitialState(in_object, mask_object, out_object, img)
+            });
+        });
+        $('.btn-save').click(function () {
+            var canvasOut = $('#canvas_out')[0];
+            var save_link = $('#save-link')[0];
+            save_link.href = canvasOut.toDataURL('image/png');
+            save_link.download = 'output.png';
+            save_link.click();
+        });
 
-        init_draw();
-
-        $('#btn-undo').click(cUndo);
-        $('#btn-redo').click(cRedo);
-        $('#btn-clear').click(cClear);
+        // bottom buttons
+        $('#btn-undo').click(function () {
+            var data = drawHistory.undo();
+            dataURIToImage(data['mask'], function (img) {
+                fillCanvas(mask_object, img);
+            });
+            dataURIToImage(data['result'], function (img) {
+                fillCanvas(out_object, img);
+            });
+        });
+        $('#btn-redo').click(function () {
+            var data = drawHistory.redo();
+            dataURIToImage(data['mask'], function (img) {
+                fillCanvas(mask_object, img);
+            });
+            dataURIToImage(data['result'], function (img) {
+                fillCanvas(out_object, img);
+            });
+        });
+        $('#btn-clear').click(function () {
+            fillCanvas(mask_object);
+            dataURIToImage(in_object.toDataURL(), function (img) {
+                fillCanvas(out_object, img);
+            });
+            drawHistory.clear();
+            drawHistory.push({
+                'mask': mask_object.toDataURL(),
+                'result': in_object.toDataURL()
+            });
+        });
     });
 
-    function load(e) {
-        var ctx_in = canvas_in.getContext('2d');
-        var ctx_out = canvas_out.getContext('2d');
+    function applyInitialState(in_object, mask_object, out_object, img) {
+        fillCanvas(in_object, img);
+        fillCanvas(mask_object);
+        fillCanvas(out_object, img);
 
-        var reader = new FileReader();
-        reader.onload = function (event) {
-            var img = new Image();
-            img.onload = function () {
-                canvas_in.width = img.width;
-                canvas_in.height = img.height;
-                ctx_in.drawImage(img, 0, 0);
-
-                canvas_out.width = img.width;
-                canvas_out.height = img.height;
-                ctx_out.drawImage(img, 0, 0);
-            };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(e.target.files[0]);
-        cClear();
-    }
-
-    function pick_random() {
-        var ctx_in = canvas_in.getContext('2d');
-        var ctx_out = canvas_out.getContext('2d');
-
-        var img = new Image;
-        img.onload = function () {
-            canvas_in.width = img.width;
-            canvas_in.height = img.height;
-            ctx_in.drawImage(img, 0, 0);
-
-            canvas_out.width = img.width;
-            canvas_out.height = img.height;
-            ctx_out.drawImage(img, 0, 0);
-        };
-        img.src = '/pick_random?dummy=' + Date.now().toString();
-        cClear();
-    }
-
-    function save() {
-        var canvas = $('#canvas_out')[0];
-        var save_link = $('#save-link')[0];
-        save_link.href = canvas.toDataURL('image/png');
-        save_link.download = 'output.png';
-        save_link.click();
-    }
-
-    var mousePressed = false;
-    var lastX, lastY;
-    var mask_context;
-
-    function init_draw() {
-        mask_context = document.getElementById('canvas_mask').getContext("2d");
-        var canvas_mask = $('#canvas_mask');
-        canvas_mask.mousedown(function (e) {
-            mousePressed = true;
-            var x_rel = (e.pageX - $(this).offset().left) / this.offsetWidth * 500;
-            var y_rel = (e.pageY - $(this).offset().top) / this.offsetHeight * 500;
-            Draw(x_rel, y_rel, false);
+        drawHistory.clear();
+        drawHistory.push({
+            'mask': mask_object.toDataURL(),
+            'result': in_object.toDataURL()
         });
 
-        canvas_mask.mousemove(function (e) {
-            if (mousePressed) {
-                var x_rel = (e.pageX - $(this).offset().left) / this.offsetWidth * 500;
-                var y_rel = (e.pageY - $(this).offset().top) / this.offsetHeight * 500;
-                Draw(x_rel, y_rel, true);
-            }
-        });
-
-        canvas_mask.mouseup(function (e) {
-            if (mousePressed) {
-                mousePressed = false;
-                cPush();
-                sendToApply();
-            }
-        });
-
-        canvas_mask.mouseleave(function (e) {
-            if (mousePressed) {
-                mousePressed = false;
-                cPush();
-                sendToApply();
+        api.sendImage(in_object, function (data) {
+            drawHistory.image_id = data['image_id'];
+            if (!drawEngine.is_allowed) {
+                drawEngine.allow();
             }
         });
     }
 
-    function Draw(x, y, isDown) {
-        if (isDown) {
-            mask_context.beginPath();
-            mask_context.strokeStyle = 'white';
-            mask_context.lineWidth = $('#selWidth').val();
-            mask_context.lineJoin = "round";
-            mask_context.moveTo(lastX, lastY);
-            mask_context.lineTo(x, y);
-            mask_context.closePath();
-            mask_context.stroke();
+    function fillCanvas(canvas_object, img) {
+        var canvas_context = canvas_object.getContext("2d");
+        canvas_context.clearRect(0, 0, canvas_object.width, canvas_object.height);
+        if (img != null) {
+            canvas_object.width = img.width;
+            canvas_object.height = img.height;
+            canvas_context.drawImage(img, 0, 0);
         }
-        lastX = x;
-        lastY = y;
-    }
-
-    var cPushArray = [];
-    var cStep = 0;
-
-    function cPush() {
-        cStep++;
-        if (cStep < cPushArray.length) {
-            cPushArray.length = cStep;
-        }
-        cPushArray.push(document.getElementById('canvas_mask').toDataURL());
-    }
-
-    function cUndo() {
-        if (cStep > 0) {
-            cStep--;
-            var canvas = $('#canvas_mask')[0];
-            var canvasPic = new Image();
-            canvasPic.src = cPushArray[cStep];
-            canvasPic.onload = function () {
-                mask_context.clearRect(0, 0, canvas.width, canvas.height);
-                mask_context.drawImage(canvasPic, 0, 0);
-            };
-        }
-    }
-
-    function cRedo() {
-        if (cStep < cPushArray.length - 1) {
-            cStep++;
-            var canvas = $('#canvas_mask')[0];
-            var canvasPic = new Image();
-            canvasPic.src = cPushArray[cStep];
-            canvasPic.onload = function () {
-                mask_context.clearRect(0, 0, canvas.width, canvas.height);
-                mask_context.drawImage(canvasPic, 0, 0);
-            };
-        }
-    }
-
-    function cClear() {
-        var canvas = $('#canvas_mask')[0];
-        mask_context.clearRect(0, 0, canvas.width, canvas.height);
-
-        cPushArray = [];
-        cStep = 0;
-
-        cPush();
-    }
-
-    function sendToApply() {
-        $.ajax({
-            url: '/apply',
-            type: 'post',
-            data: {
-                'image': document.getElementById('canvas_in').toDataURL(),
-                'mask': document.getElementById('canvas_mask').toDataURL()
-            },
-            success: function (data) {
-                var canvas = $('#canvas_out')[0];
-                var out_context = canvas.getContext("2d");
-
-                var canvasPic = new Image();
-                canvasPic.src = 'data:image/png;base64,' + data;
-                canvasPic.onload = function () {
-                    out_context.clearRect(0, 0, canvas.width, canvas.height);
-                    out_context.drawImage(canvasPic, 0, 0);
-                };
-            }
-        });
     }
 </script>
 </html>
