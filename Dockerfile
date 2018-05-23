@@ -12,7 +12,7 @@ RUN pip3 install -r requirements.txt
 # Download pretrained model
 RUN wget -O ./app/static/models/default_model.state_dict https://www.dropbox.com/s/gb0yamqa6cnoomy/model_no_sigmoid_lr_all_50.pth?dl=1
 
-EXPOSE 8003
+EXPOSE 5000
 
 WORKDIR /inpaint/app
-CMD ["gunicorn", "app:setup_app('static/models/model.state_dict')", "-b", "0.0.0.0:8003", "-w", "4"]
+CMD ["gunicorn", "app:setup_app('static/models/model.state_dict')", "-b", "0.0.0.0:5000", "-w", "4"]
