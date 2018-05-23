@@ -128,19 +128,21 @@ DrawEngine.prototype.allow = function () {
     var self = this;
     if (!self.is_allowed) {
         self.mask_selector.on('mousedown touchstart', function (event) {
-            console.log('start draw');
+            // console.log('start draw');
             self.mousePressed = true;
-            self.startDraw(event);
+            var rel_coords = self.relativeCoords(event);
+            self.startDraw(rel_coords[0], rel_coords[1]);
         });
         self.mask_selector.on('mousemove touchmove', function (event) {
-            console.log('move');
             if (self.mousePressed) {
-                self.draw(event);
+                // console.log('draw move');
+                var rel_coords = self.relativeCoords(event);
+                self.draw(rel_coords[0], rel_coords[1]);
             }
             event.preventDefault();
         });
         self.mask_selector.on('mouseup mouseleave touchend', function () {
-            console.log('end draw');
+            // console.log('end draw');
             if (self.mousePressed) {
                 self.mousePressed = false;
                 self.applyMask();
@@ -150,11 +152,25 @@ DrawEngine.prototype.allow = function () {
     }
 };
 
-DrawEngine.prototype.startDraw = function (event) {
+DrawEngine.prototype.relativeCoords = function (event) {
     var target = event.currentTarget;
-    var x_rel = (event.pageX - $(target).offset().left) / target.offsetWidth * 256;
-    var y_rel = (event.pageY - $(target).offset().top) / target.offsetHeight * 256;
+    var pageX, pageY;
+    if (event.targetTouches) { // this is touch
+        if (event.targetTouches.length === 1) { // not gestures
+            pageX = event.targetTouches[0].pageX;
+            pageY = event.targetTouches[0].pageY;
+        }
+    } else { // this is desktop
+        pageX = event.pageX;
+        pageY = event.pageY;
+    }
+    var x_rel = (pageX - $(target).offset().left) / target.offsetWidth * 256;
+    var y_rel = (pageY - $(target).offset().top) / target.offsetHeight * 256;
+    // console.log(x_rel, y_rel);
+    return [x_rel, y_rel];
+};
 
+DrawEngine.prototype.startDraw = function (x_rel, y_rel) {
     this.mask_context.beginPath();
     this.mask_context.arc(x_rel, y_rel, this.width / 2, 0, 2 * Math.PI, false);
     this.mask_context.fillStyle = 'white';
@@ -165,11 +181,7 @@ DrawEngine.prototype.startDraw = function (event) {
     this.lastY = y_rel;
 };
 
-DrawEngine.prototype.draw = function (event) {
-    var target = event.currentTarget;
-    var x_rel = (event.pageX - $(target).offset().left) / target.offsetWidth * 256;
-    var y_rel = (event.pageY - $(target).offset().top) / target.offsetHeight * 256;
-
+DrawEngine.prototype.draw = function (x_rel, y_rel) {
     this.mask_context.beginPath();
     this.mask_context.strokeStyle = 'white';
     this.mask_context.lineWidth = this.width;

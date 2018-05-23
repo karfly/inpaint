@@ -19,8 +19,10 @@ RUN pip3 install Flask==1.0.2 \
                  torch==0.4.0 \
                  torchvision==0.2.1
 
+RUN wget -O model.state_dict $MODEL_URL
+
 COPY . /inpaint
-RUN wget -O /inpaint/app/static/models/model.state_dict $MODEL_URL
+RUN mv model.state_dict /inpaint/app/static/models/
 
 EXPOSE 5000
 
