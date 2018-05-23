@@ -1,5 +1,5 @@
-function base64ToDataURI(dataURI) {
-    return 'data:image/png;base64,' + dataURI
+function base64ToDataURI(base64) {
+    return 'data:image/png;base64,' + base64
 }
 
 function blobToDataURI(blob, callback) {
@@ -189,7 +189,7 @@ DrawEngine.prototype.applyMask = function () {
         var self = this;
         api.sendMask(this.mask_object, function (data) {
             if (drawHistory.image_id === data['image_id']) {
-                var resultURI = base64ToDataURI(data['result']);
+                var resultURI = data['result'];
                 drawHistory.update(data['step_id'], 'result', resultURI);
                 if (drawHistory.cStep === data['step_id']) {
                     dataURIToImage(resultURI, function (img) {

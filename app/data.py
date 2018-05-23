@@ -1,8 +1,17 @@
+import base64
+import io
 from datetime import datetime
+from io import BytesIO
 
-import numpy as np
 import pymongo
-from bson import Binary, ObjectId
+from PIL import Image
+from bson import ObjectId
+
+
+def pil_to_dataURI(image):
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    return 'data:image/png;base64,' + base64.b64encode(buffered.getvalue()).decode('utf8')
 
 
 class Storage:
@@ -13,22 +22,23 @@ class Storage:
         self.coll_masks = db.masks
 
     def get_image_by_id(self, image_id):
-        numpy_bytes = list(self.coll_images.find({'_id': ObjectId(image_id)}))[0]['image']
-        return np.frombuffer(numpy_bytes, dtype='uint8').reshape((3, 256, 256))
+        dataURI_image = list(self.coll_images.find({'_id': ObjectId(image_id)}))[0]['image']
+        base64_image = dataURI_image[len('data:image/png;base64,'):]
+        return Image.open(BytesIO(base64.b64decode(base64_image)))
 
-    def save_image(self, image_bytes: np.ndarray):
+    def save_image(self, image: Image):
         image_id = self.coll_images.save({
             "datatime": datetime.now(),
-            "image": Binary(image_bytes.astype('uint8').tobytes())
+            "image": pil_to_dataURI(image)
         })
         return str(image_id)
 
-    def save_mask_and_result(self, image_id, step_id, mask: np.ndarray, result: np.ndarray):
+    def save_mask_and_result(self, image_id, step_id, mask: Image, result: Image):
         mask_id = self.coll_masks.save({
             "datatime": datetime.now(),
             "image_id": ObjectId(image_id),
             "step_id": step_id,
-            "mask": Binary(mask.astype('uint8').tobytes()),
-            "result": Binary(result.astype('uint8').tobytes())
+            "mask": pil_to_dataURI(mask),
+            "result": pil_to_dataURI(result)
         })
         return str(mask_id)

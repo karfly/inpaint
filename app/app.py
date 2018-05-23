@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import base64
-import io
 import os
 import random
 import sys
@@ -11,7 +9,7 @@ import numpy as np
 from PIL import Image
 from flask import Flask, render_template, request, send_file, session, jsonify
 
-from data import Storage
+from data import Storage, pil_to_dataURI
 
 sys.path.append('..')
 from inpaint import make_inpainter
@@ -26,9 +24,9 @@ app.secret_key = 'super secret key 228'
 
 
 def setup_app(
-    model_state_dict=None,
-    random_images_dir=DEFAULT_RANDOM_IMAGES_DIR,
-    device='cpu'
+        model_state_dict=None,
+        random_images_dir=DEFAULT_RANDOM_IMAGES_DIR,
+        device='cpu'
 ):
     """Configure Flask application.
     
@@ -57,21 +55,6 @@ def setup_app(
     return app
 
 
-def extract_image(image_bytes, new_shape=None):
-    image = Image.open(BytesIO(image_bytes))
-    if new_shape:
-        image = image.resize(new_shape)
-    # np.array(encoded_image) has 4 canals, the last one is not needed
-    return np.array(image, dtype='uint8')[:, :, :-1].transpose((2, 0, 1))
-
-
-def prepare_result_image(image):
-    image = Image.fromarray((image.transpose((1, 2, 0)) * 255.0).astype(np.uint8))
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode('utf8')
-
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -86,7 +69,9 @@ def pick_random():
 
 @app.route('/add_image', methods=['POST'])
 def add_image():
-    image = extract_image(request.files['image'].read(), (256, 256))
+    image = Image.open(BytesIO(request.files['image'].read()))
+    image = image.resize((256, 256))
+
     image_id = Storage().save_image(image)
     session['image_id'] = str(image_id)
     return jsonify({
@@ -101,17 +86,23 @@ def apply_mask():
     image_id = session["image_id"]
     step_id = int(request.form['step_id'])
 
-    image = storage.get_image_by_id(image_id).astype(np.float32)
-    reversed_mask = extract_image(request.files['mask'].read(), image.shape[1:])
-    mask = np.where(reversed_mask, 0, 1).astype(np.float32)
-    result = INPAINTER(np.where(mask, image, 0) / 255., mask)
+    image = storage.get_image_by_id(image_id)
+    image = np.array(image, dtype=np.float32)[:, :, :-1].transpose((2, 0, 1))
 
-    storage.save_mask_and_result(image_id, step_id, mask, result)
-    image_base64 = prepare_result_image(result)
+    reversed_mask = Image.open(BytesIO(request.files['mask'].read()))
+    reversed_mask = reversed_mask.resize(image.shape[1:])
+    reversed_mask = np.array(reversed_mask, dtype=np.float32)[:, :, :-1].transpose((2, 0, 1))
+    mask = np.where(reversed_mask, 0, 1).astype(np.float32)
+
+    result = INPAINTER(np.where(mask, image, 0) / 255., mask)
+    result = Image.fromarray((result.transpose((1, 2, 0)) * 255.).astype(np.uint8))
+
+    mask_image = Image.fromarray((mask.transpose((1, 2, 0)) * 255).astype(np.uint8))
+    storage.save_mask_and_result(image_id, step_id, mask_image, result)
     return jsonify({
         'image_id': image_id,
         'step_id': step_id,
-        'result': image_base64
+        'result': pil_to_dataURI(result)
     })
 
 
