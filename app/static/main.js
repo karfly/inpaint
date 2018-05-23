@@ -141,8 +141,8 @@ DrawEngine.prototype.allow = function () {
         });
         self.mask_selector.on('mouseup mouseleave touchend', function () {
             console.log('end draw');
-            if (this.mousePressed) {
-                this.mousePressed = false;
+            if (self.mousePressed) {
+                self.mousePressed = false;
                 self.applyMask();
             }
         });
