@@ -7,7 +7,7 @@ from bson import Binary, ObjectId
 
 class Storage:
     def __init__(self):
-        conn = pymongo.MongoClient()
+        conn = pymongo.MongoClient(host='mongo')
         db = conn.inpainting
         self.coll_images = db.images
         self.coll_masks = db.masks

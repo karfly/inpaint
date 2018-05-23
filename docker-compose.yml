@@ -1,0 +1,13 @@
+version: '3'
+services:
+  mongo:
+    image: mongo
+  app:
+    build: .
+    depends_on:
+      - mongo
+    environment:
+      LANG: C.UTF-8
+      TZ: Europe/Moscow
+    ports:
+      - 5000:8003
