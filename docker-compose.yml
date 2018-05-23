@@ -2,6 +2,9 @@ version: '3'
 services:
   mongo:
     image: mongo
+    restart: always
+    volumes:
+      - /root/inpaint_mongo_data:/data/db
   app:
     build: .
     depends_on:

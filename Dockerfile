@@ -15,7 +15,9 @@ RUN pip3 install Flask==1.0.2 \
                  pycodestyle==2.4.0 \
                  tqdm==4.23.3 \
                  pyflakes==1.6.0 \
-                 pymongo==3.6.1
+                 pymongo==3.6.1 \
+                 torch==0.4.0 \
+                 torchvision==0.2.1
 
 COPY . /inpaint
 RUN wget -O /inpaint/app/static/models/model.state_dict $MODEL_URL
