@@ -10,7 +10,7 @@ RUN pip3 install --upgrade pip
 RUN pip3 install -r requirements.txt
 
 # Download pretrained model
-RUN python3 ./scripts/download_default_model.py --url https://www.dropbox.com/s/qjzeh9etmaq4w0o/model_no_sigmoid_lr_all_126.pth?dl=1 --path app/static/models/model.state_dict
+RUN python3 ./scripts/download_default_model.py --url https://www.dropbox.com/s/gb0yamqa6cnoomy/model_no_sigmoid_lr_all_50.pth?dl=1 --path app/static/models/model.state_dict
 
 EXPOSE 8003
 
