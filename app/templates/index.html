@@ -4,20 +4,25 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <title>Inpainting</title>
+    <title>Inpaint</title>
 
-    <link rel="stylesheet" href="/static/bower_components/bootstrap/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/static/bower_components/seiyria-bootstrap-slider/dist/css/bootstrap-slider.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css"
+          integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.2/css/bootstrap-slider.min.css"
+          integrity="sha256-GwA8DO9HkVp1kdrzQyoT/zi9qZDV/902GSxlrGOfjo8=" crossorigin="anonymous"/>
 
-    <script src="/static/bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
             integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
             crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"
             integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
             crossorigin="anonymous"></script>
-    <script src="/static/bower_components/seiyria-bootstrap-slider/dist/bootstrap-slider.min.js"></script>
-    <script src="/static/main.js?version=29"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.2/bootstrap-slider.min.js"
+            integrity="sha256-VYMMGFCEeBYop7KDzrlj8Bf6R4rhv0XxdH/ctYViebc=" crossorigin="anonymous"></script>
+    <script src="/static/main.js?version=31"></script>
 
     <style>
         canvas {
@@ -88,16 +93,21 @@
 <div class="container">
     <div class="row" style="margin: 10px 0">
         <div class="col-sm-6">
-            <div class="picture-inner float-right" style="position:relative; display: inline-block;">
-                <canvas id="canvas-in" height="256" width="500" style="z-index: 1;"></canvas>
-                <canvas id="canvas-mask" height="256" width="256"
-                        style="z-index: 2; position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 6px); cursor: crosshair;"></canvas>
-            </div>
+            <center>
+                <div class="picture-inner float-right" style="position:relative; display: inline-block;">
+                    <canvas id="canvas-in" height="256" width="500" style="z-index: 1;"></canvas>
+                    <canvas id="canvas-mask" height="256" width="256"
+                            style="z-index: 2; position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 6px);
+                         cursor: crosshair; touch-action: none;"></canvas>
+                </div>
+            </center>
         </div>
         <div class="col-sm-6">
-            <div class="picture-inner">
-                <canvas id="canvas-out" height="256" width="500"></canvas>
-            </div>
+            <center>
+                <div class="picture-inner float-left">
+                    <canvas id="canvas-out" height="256" width="500"></canvas>
+                </div>
+            </center>
         </div>
     </div>
     <div>
@@ -117,6 +127,12 @@
 
 <script>
     $(document).ready(function () {
+        $('#sel-width').slider();
+        $('#sel-width').change(function () {
+            drawEngine.width = this.value;
+        });
+
+
         drawHistory = new History();
         api = new Api();
         drawEngine = new DrawEngine($('#canvas-mask'), $('#canvas-out'), $('#sel-width'));
@@ -124,11 +140,6 @@
         var in_object = $('#canvas-in')[0];
         var mask_object = $('#canvas-mask')[0];
         var out_object = $('#canvas-out')[0];
-
-        $('#sel-width').slider();
-        $('#sel-width').change(function () {
-            drawEngine.width = this.value;
-        });
 
         // top buttons
         $('.file-upload').change(function (e) {

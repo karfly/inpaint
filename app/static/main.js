@@ -129,16 +129,22 @@ DrawEngine.prototype.allow = function () {
     if (!self.is_allowed) {
         self.mask_selector.on('mousedown touchstart', function (event) {
             console.log('start draw');
+            self.mousePressed = true;
             self.startDraw(event);
         });
         self.mask_selector.on('mousemove touchmove', function (event) {
             console.log('move');
+            if (self.mousePressed) {
+                self.draw(event);
+            }
             event.preventDefault();
-            self.draw(event);
         });
         self.mask_selector.on('mouseup mouseleave touchend', function () {
             console.log('end draw');
-            self.applyMask();
+            if (this.mousePressed) {
+                this.mousePressed = false;
+                self.applyMask();
+            }
         });
         self.is_allowed = true;
     }
@@ -155,48 +161,42 @@ DrawEngine.prototype.startDraw = function (event) {
     this.mask_context.fill();
     this.mask_context.closePath();
 
-    this.mousePressed = true;
     this.lastX = x_rel;
     this.lastY = y_rel;
 };
 
 DrawEngine.prototype.draw = function (event) {
-    if (this.mousePressed) {
-        var target = event.currentTarget;
-        var x_rel = (event.pageX - $(target).offset().left) / target.offsetWidth * 256;
-        var y_rel = (event.pageY - $(target).offset().top) / target.offsetHeight * 256;
+    var target = event.currentTarget;
+    var x_rel = (event.pageX - $(target).offset().left) / target.offsetWidth * 256;
+    var y_rel = (event.pageY - $(target).offset().top) / target.offsetHeight * 256;
 
-        this.mask_context.beginPath();
-        this.mask_context.strokeStyle = 'white';
-        this.mask_context.lineWidth = this.width;
-        this.mask_context.lineJoin = "round";
-        this.mask_context.moveTo(this.lastX, this.lastY);
-        this.mask_context.lineTo(x_rel, y_rel);
-        this.mask_context.closePath();
-        this.mask_context.stroke();
+    this.mask_context.beginPath();
+    this.mask_context.strokeStyle = 'white';
+    this.mask_context.lineWidth = this.width;
+    this.mask_context.lineJoin = "round";
+    this.mask_context.moveTo(this.lastX, this.lastY);
+    this.mask_context.lineTo(x_rel, y_rel);
+    this.mask_context.closePath();
+    this.mask_context.stroke();
 
-        this.lastX = x_rel;
-        this.lastY = y_rel;
-    }
+    this.lastX = x_rel;
+    this.lastY = y_rel;
 };
 
 DrawEngine.prototype.applyMask = function () {
-    if (this.mousePressed) {
-        this.mousePressed = false;
-        drawHistory.push({
-            'mask': this.mask_object.toDataURL()
-        });
-        var self = this;
-        api.sendMask(this.mask_object, function (data) {
-            if (drawHistory.image_id === data['image_id']) {
-                var resultURI = data['result'];
-                drawHistory.update(data['step_id'], 'result', resultURI);
-                if (drawHistory.cStep === data['step_id']) {
-                    dataURIToImage(resultURI, function (img) {
-                        fillCanvas(self.out_object, img);
-                    });
-                }
+    drawHistory.push({
+        'mask': this.mask_object.toDataURL()
+    });
+    var self = this;
+    api.sendMask(this.mask_object, function (data) {
+        if (drawHistory.image_id === data['image_id']) {
+            var resultURI = data['result'];
+            drawHistory.update(data['step_id'], 'result', resultURI);
+            if (drawHistory.cStep === data['step_id']) {
+                dataURIToImage(resultURI, function (img) {
+                    fillCanvas(self.out_object, img);
+                });
             }
-        });
-    }
+        }
+    });
 };
