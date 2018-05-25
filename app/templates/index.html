@@ -51,10 +51,6 @@
             display: none;
         }
 
-        .picture-inner {
-            float: none !important;
-        }
-
         .nav-link {
             padding-right: .5rem !important;
             padding-left: .5rem !important;
@@ -79,6 +75,10 @@
 
             #canvas-container-right {
                 float: left;
+            }
+
+            #history-buttons-container {
+                float: right;
             }
         }
     </style>
@@ -128,7 +128,7 @@
             <input id="width-input" data-slider-id='selWidthSlider' type="text" data-slider-min="2" data-slider-max="50"
                    data-slider-step="1" data-slider-value="10" value="10"/>
         </div>
-        <div class="picture-inner float-right">
+        <div id="history-buttons-container">
             <button id="btn-undo" class="btn btn-secondary">Undo</button>
             <button id="btn-redo" class="btn btn-secondary">Redo</button>
             <button id="btn-clear" class="btn btn-secondary">Clear</button>
