@@ -11,19 +11,8 @@
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.2/css/bootstrap-slider.min.css"
           integrity="sha256-GwA8DO9HkVp1kdrzQyoT/zi9qZDV/902GSxlrGOfjo8=" crossorigin="anonymous"/>
-
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
-            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
-            integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
-            crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"
-            integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
-            crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.2/bootstrap-slider.min.js"
-            integrity="sha256-VYMMGFCEeBYop7KDzrlj8Bf6R4rhv0XxdH/ctYViebc=" crossorigin="anonymous"></script>
-    <script src="/static/main.js?version=35"></script>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.2/croppie.min.css"
+          integrity="sha256-/n6IXDwJAYIh7aLVfRBdduQfdrab96XZR+YjG42V398=" crossorigin="anonymous"/>
     <style>
         canvas {
             max-width: 100%;
@@ -36,6 +25,14 @@
 
         .slider {
             margin: 8px 10px;
+        }
+
+        .croppie-container .cr-boundary {
+            height: calc(100% - 33px);
+        }
+
+        .modal-content {
+            background-color: #343a40 !important;
         }
 
         canvas {
@@ -76,16 +73,16 @@
     <div class="container" style="justify-content: normal">
         <div id='header-buttons' style="display: inline-block;">
             <a id='logo' class="navbar-brand" href="#">Inpainting</a>
-            <input type="file" id="file-upload" name="file-upload" style="display: none;"/>
 
-            <label for="file-upload" class="btn btn-secondary btn-load">Load image</label>
+            <button class="btn btn-secondary btn-load">Load image</button>
             <button class="btn btn-secondary btn-pick-random">Pick random</button>
             <button class="btn btn-secondary btn-save">Save result</button>
 
-            <label for="file-upload" class="btn btn-secondary btn-load touch">Load</label>
-            <button class="btn btn-secondary btn-pick-random touch">Pick</button>
-            <button class="btn btn-secondary btn-save touch">Save</button>
-
+            <ul>
+                <li class="btn-load touch">Load</li>
+                <li class="btn-pick-random touch">Pick</li>
+                <li class="btn-save touch">Save</li>
+            </ul>
             <a id="save-link" style="display: none;"></a>
         </div>
     </div>
@@ -112,8 +109,8 @@
     </div>
     <div>
         <div style="display: inline-block; margin-top: 2px">
-            Brush width
-            <input id="sel-width" data-slider-id='selWidthSlider' type="text" data-slider-min="2" data-slider-max="50"
+            Load image
+            <input id="width-input" data-slider-id='selWidthSlider' type="text" data-slider-min="2" data-slider-max="50"
                    data-slider-step="1" data-slider-value="10" value="10"/>
         </div>
         <div class="picture-inner float-right">
@@ -123,30 +120,97 @@
         </div>
     </div>
 </div>
-</body>
+
+<input type="file" id="file-upload" name="file-upload" style="display: none;"/>
+
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+        integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"
+        integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.2/bootstrap-slider.min.js"
+        integrity="sha256-VYMMGFCEeBYop7KDzrlj8Bf6R4rhv0XxdH/ctYViebc=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.2/croppie.min.js"
+        integrity="sha256-eW5JfqpvF1f4ajHCuk+lcXWNBTHDp6JmBQGOqEDXC28=" crossorigin="anonymous"></script>
+<script src="/static/bootbox-custom.js"></script>
+<script src="/static/main.js?version=36"></script>
 
 <script>
     $(document).ready(function () {
-        $('#sel-width').slider();
-        $('#sel-width').change(function () {
+        var widthSelector = $('#width-input');
+        widthSelector.slider();
+        widthSelector.change(function () {
             drawEngine.width = this.value;
         });
-
-
-        drawHistory = new History();
-        api = new Api();
-        drawEngine = new DrawEngine($('#canvas-mask'), $('#canvas-out'), $('#sel-width'));
 
         var in_object = $('#canvas-in')[0];
         var mask_object = $('#canvas-mask')[0];
         var out_object = $('#canvas-out')[0];
 
+        drawHistory = new History();
+        api = new Api();
+        drawEngine = new DrawEngine(mask_object, out_object, widthSelector[0]);
+
         // top buttons
-        $('.file-upload').change(function (e) {
-            blobToImage(e.target.files[0], function (img) {
-                applyInitialState(in_object, mask_object, out_object, img)
+        $('.btn-load').click(function () {
+            dialog = bootbox.dialog({
+                title: 'Load image',
+                message: 'Loading...',
+                buttons: {
+                    cancel: {
+                        label: 'Cancel',
+                        className: 'btn-secondary'
+                    },
+                    reload: {
+                        label: 'Load another',
+                        className: 'btn-secondary',
+                        callback: function (e) {
+                            $('#file-upload').trigger('click');
+                            e.preventDefault();
+                            return false;
+                        }
+                    },
+                    confirm: {
+                        label: 'Use',
+                        className: 'btn-primary',
+                        callback: function (e) {
+                            croppie_image.croppie('result', {
+                                type: 'base64',
+                                size: {width: 256, height: 256}
+                            }).then(function (dataURI) {
+                                dataURIToImage(dataURI, function (img) {
+                                    applyInitialState(in_object, mask_object, out_object, img);
+                                });
+                            });
+                        }
+                    }
+                }
             });
 
+            dialog.init(function () {
+                $('#file-upload').trigger('click');
+            });
+        });
+        $('#file-upload').change(function (e) {
+            console.log('file changed!');
+            dialog.find('.bootbox-body').html('' +
+                '<div style="height: 300px">' +
+                '<img id="croppie-image" src="" alt="Loading..."/>' +
+                '</div>');
+            blobToDataURI(e.target.files[0], function (dataURI) {
+                croppie_image = $('#croppie-image');
+                croppie_image.attr('src', dataURI);
+                croppie_image.croppie({
+                    'viewport': {
+                        'width': 200,
+                        'height': 200,
+                        'type': 'square'
+                    }
+                });
+            });
         });
         $('.btn-pick-random').click(function () {
             dataURIToImage('/pick_random?dummy=' + Date.now().toString(), function (img) {
@@ -222,4 +286,6 @@
         }
     }
 </script>
+
+</body>
 </html>

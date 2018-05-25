@@ -113,15 +113,15 @@ Api.prototype.sendMask = function (canvas_object, callback) { // $('#canvas-mask
 };
 
 
-function DrawEngine(mask_selector, out_selector, width_selector) {
+function DrawEngine(mask_object, out_object, width_object) {
     this.mousePressed = false;
     this.is_allowed = false;
 
-    this.mask_selector = mask_selector;
-    this.mask_object = mask_selector[0];
-    this.mask_context = mask_selector[0].getContext("2d");
-    this.out_object = out_selector[0];
-    this.width = width_selector.val();
+    this.mask_selector = $(mask_object);
+    this.mask_object = mask_object;
+    this.mask_context = mask_object.getContext("2d");
+    this.out_object = out_object;
+    this.width = $(width_object).val();
 }
 
 DrawEngine.prototype.allow = function () {
