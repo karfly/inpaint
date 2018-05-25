@@ -47,23 +47,38 @@
             margin-bottom: 4px;
         }
 
-        .btn-load.touch, .btn-pick-random.touch, .btn-save.touch {
+        #header-buttons {
             display: none;
         }
 
-        @media (max-device-width: 576px) {
-            .btn-load, .btn-pick-random, .btn-save {
-                display: none;
+        .picture-inner {
+            float: none !important;
+        }
+
+        .nav-link {
+            padding-right: .5rem !important;
+            padding-left: .5rem !important;
+        }
+
+        @media (min-width: 576px) {
+            .navbar .container {
+                 display: inline-block;
             }
 
-            .btn-load.touch, .btn-pick-random.touch, .btn-save.touch {
+            #header-buttons {
                 display: inline-block;
             }
 
-            .picture-inner {
-                margin-left: auto !important;
-                margin-right: auto !important;
-                float: none !important;
+            #header-buttons-touch {
+                display: none;
+            }
+            
+            #canvas-container-left {
+                float: right;
+            }
+
+            #canvas-container-right {
+                float: left;
             }
         }
     </style>
@@ -71,27 +86,27 @@
 <body class="bg-dark text-light">
 <nav class="navbar navbar-dark bg-dark">
     <div class="container" style="justify-content: normal">
-        <div id='header-buttons' style="display: inline-block;">
-            <a id='logo' class="navbar-brand" href="#">Inpainting</a>
+        <a id='logo' class="navbar-brand" href="#">Inpainting</a>
 
+        <div id="header-buttons">
             <button class="btn btn-secondary btn-load">Load image</button>
             <button class="btn btn-secondary btn-pick-random">Pick random</button>
             <button class="btn btn-secondary btn-save">Save result</button>
-
-            <ul>
-                <li class="btn-load touch">Load</li>
-                <li class="btn-pick-random touch">Pick</li>
-                <li class="btn-save touch">Save</li>
-            </ul>
-            <a id="save-link" style="display: none;"></a>
         </div>
+
+        <ul id="header-buttons-touch" class="navbar-nav" style="flex-direction: row;">
+            <li class="nav-item nav-link btn-load touch">Load</li>
+            <li class="nav-item nav-link btn-pick-random touch">Pick</li>
+            <li class="nav-item nav-link btn-save touch">Save</li>
+        </ul>
+        <a id="save-link" style="display: none;"></a>
     </div>
 </nav>
 <div class="container">
     <div class="row" style="margin: 10px 0">
         <div class="col-sm-6">
             <center>
-                <div class="picture-inner float-right" style="position:relative; display: inline-block;">
+                <div id="canvas-container-left" style="position:relative; display: inline-block;">
                     <canvas id="canvas-in" height="256" width="500" style="z-index: 1;"></canvas>
                     <canvas id="canvas-mask" height="256" width="256"
                             style="z-index: 2; position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 6px);
@@ -101,7 +116,7 @@
         </div>
         <div class="col-sm-6">
             <center>
-                <div class="picture-inner float-left">
+                <div id="canvas-container-right">
                     <canvas id="canvas-out" height="256" width="500"></canvas>
                 </div>
             </center>
