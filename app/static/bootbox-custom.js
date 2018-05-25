@@ -38,7 +38,7 @@
       "</div>",
     header:
       "<div class='modal-header'>" +
-        "<h4 class='modal-title'></h4>" +
+        "<h5 class='modal-title'></h5>" +
       "</div>",
     footer:
       "<div class='modal-footer'></div>",
@@ -621,7 +621,7 @@
       var closeButton = $(templates.closeButton);
 
       if (options.title) {
-        dialog.find(".modal-header").prepend(closeButton);
+        dialog.find(".modal-header").append(closeButton);
       } else {
         closeButton.css("margin-top", "-10px").prependTo(body);
       }
