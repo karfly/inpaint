@@ -58,7 +58,7 @@
 
         @media (min-width: 576px) {
             .navbar .container {
-                 display: inline-block;
+                display: inline-block;
             }
 
             #header-buttons {
@@ -68,7 +68,7 @@
             #header-buttons-touch {
                 display: none;
             }
-            
+
             #canvas-container-left {
                 float: right;
             }
@@ -148,6 +148,8 @@
         crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.2/bootstrap-slider.min.js"
         integrity="sha256-VYMMGFCEeBYop7KDzrlj8Bf6R4rhv0XxdH/ctYViebc=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"
+        integrity="sha256-dhm9R4pgGAdElt/Z8BnKk9fsaEtqSz11u0+FwCIXHy4=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.2/croppie.min.js"
         integrity="sha256-eW5JfqpvF1f4ajHCuk+lcXWNBTHDp6JmBQGOqEDXC28=" crossorigin="anonymous"></script>
 <script src="/static/bootbox-custom.js"></script>
@@ -223,7 +225,8 @@
                         'width': 200,
                         'height': 200,
                         'type': 'square'
-                    }
+                    },
+                    'enableExif': true
                 });
             });
         });
