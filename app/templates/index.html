@@ -236,9 +236,8 @@
             });
         });
         $('.btn-save').click(function () {
-            var canvasOut = $('#canvas_out')[0];
             var save_link = $('#save-link')[0];
-            save_link.href = canvasOut.toDataURL('image/png');
+            save_link.href = out_object.toDataURL('image/png');
             save_link.download = 'output.png';
             save_link.click();
         });
