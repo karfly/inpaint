@@ -26,23 +26,34 @@ def _style_loss(x_gram_matrices, y_gram_matrices, coefs):
         for x, y, c in zip(x_gram_matrices, y_gram_matrices, coefs)
     )
 
+class TVLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
 
-def _tv_loss(x, mask):
-    first = torch.sum(torch.abs(
-        x[:, :, :, :-1] * mask[:, :, :, :-1] -
-        x[:, :, :, 1: ] * mask[:, :, :, :-1]
-    ))
-    second = torch.sum(torch.abs(
-        x[:, :, :-1, :] * mask[:, :, :-1, :] -
-        x[:, :, 1: , :] * mask[:, :, :-1, :]
-    ))
-    return first + second
+    def forward(self, x):
+        batch_size = x.shape[0]
+        h_x = x.shape[2]
+        w_x = x.shape[3]
+
+        count_h = self._tensor_size(x[:, :, 1:,:])
+        count_w = self._tensor_size(x[:, :, :, 1:])
+
+        h_tv = torch.sum(torch.abs(x[:, :, 1:, :] - x[:, :, :h_x-1, :]))
+        w_tv = torch.sum(torch.abs(x[:, :, :, 1:] - x[:, :, :, :w_x-1]))
+
+        return (h_tv / count_h + w_tv / count_w) / batch_size
+
+    def _tensor_size(self, t):
+        return t.shape[1] * t.shape[2] * t.shape[3]
 
 
 class _PretrainedFeaturesGenerator(nn.Module):
     def __init__(self, module, layers, preprocessor=None, reshape=True):
         super().__init__()
         self._module = module
+        for param in self._module:
+            param.requires_grad = False
+
         self._layers = set(layers)
         self._preprocessor = preprocessor or (lambda x: x)
         self._reshape = reshape
@@ -52,7 +63,7 @@ class _PretrainedFeaturesGenerator(nn.Module):
         x = self._preprocessor(x)
         layers = copy.deepcopy(self._layers)
         output = []
-
+        
         for layer, module in self._module._modules.items():
             if not layers:
                 break
@@ -102,7 +113,10 @@ class InpaintLoss(nn.Module):
         self._hole_coef = hole_coef
         self._perceptual_coef = perceptual_coef
         self._style_coef = style_coef
+
         self._tv_coef = tv_coef
+        self._tv_loss = TVLoss()
+
         self._style_features_generator = (
             style_features_generator or
             _PretrainedFeaturesGenerator(
@@ -132,43 +146,48 @@ class InpaintLoss(nn.Module):
         -------
         loss : FloatTensor
         """
-        loss = torch.tensor(
-            0, dtype=torch.float32, device=out.device, requires_grad=True
-        )
-
-        loss = loss + self._valid_coef * F.l1_loss(mask * out, mask * gt)
+        # l1 loss
+        l1_valid_loss = F.l1_loss(mask * out, mask * gt)
+        
         reversed_mask = 1 - mask
-        loss = loss + self._hole_coef * (
-            F.l1_loss(reversed_mask * out, reversed_mask * gt)
-        )
+        l1_hole_loss = F.l1_loss(reversed_mask * out, reversed_mask * gt)
 
+        # perceptual loss
         out_features = self._style_features_generator(out)
         gt_features = self._style_features_generator(gt)
-        loss = loss + self._perceptual_coef * (
-            _perceptual_loss(out_features, gt_features)
-        )
+        out_perceptual_loss = _perceptual_loss(out_features, gt_features)
 
+        comp = mask * gt + (1 - mask) * out
+        comp_features = self._style_features_generator(comp)
+        comp_perceptual_loss = _perceptual_loss(comp_features, gt_features)
+
+        # style loss
         out_gram_matrices = _calculate_gram_matrices(out_features)
         gt_gram_matrices = _calculate_gram_matrices(gt_features)
         coefs = [x.shape[-2] * x.shape[-1] for x in out_features]
-        loss = loss + self._style_coef * (
-            _style_loss(out_gram_matrices, gt_gram_matrices, coefs)
-        )
-
-        comp = torch.where(mask.type(torch.uint8), gt, out).to(out.device)
-        comp_features = self._style_features_generator(comp)
-        loss = loss + self._perceptual_coef * (
-            _perceptual_loss(comp_features, gt_features)
-        )
-
+        out_style_loss = _style_loss(out_gram_matrices, gt_gram_matrices, coefs)
+        
         comp_gram_matrices = _calculate_gram_matrices(comp_features)
-        loss = loss + self._style_coef * (
-            _style_loss(comp_gram_matrices, gt_gram_matrices, coefs)
+        comp_style_loss = _style_loss(comp_gram_matrices, gt_gram_matrices, coefs)
+
+        # tv loss
+        tv_loss = self._tv_loss(comp)
+
+        loss = (
+            self._valid_coef * l1_valid_loss +
+            self._hole_coef * l1_hole_loss +
+            self._perceptual_coef * (out_perceptual_loss + comp_perceptual_loss) +
+            self._style_coef * (out_style_loss + comp_style_loss) +
+            self._tv_coef * tv_loss
         )
 
-        loss = loss + self._tv_coef * _tv_loss(comp, reversed_mask)
-
-        return loss
+        # print('l1_valid_loss', l1_valid_loss.item())
+        # print('l1_hole_loss', l1_hole_loss.item())
+        # print('perceptual_loss', out_perceptual_loss.item() + comp_perceptual_loss.item())
+        # print('style_loss', out_style_loss.item() + comp_style_loss.item())
+        # print('tv_loss', tv_loss.item())
+        
+        return loss.view((1,))
 
 
 class _PartialConv2d(nn.Module):
@@ -240,7 +259,7 @@ class _PartialConv2d(nn.Module):
         updated_mask = torch.cat(
             [updated_mask_single] * self.out_channels, dim=1
         )
-        updated_mask.to(mask.device)
+        updated_mask = updated_mask.to(mask.device)
 
         return x_after_conv_normed, updated_mask
 
