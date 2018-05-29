@@ -6,6 +6,7 @@ import PIL.Image as Image
 import torch
 import torchvision as tv
 import jsonlines
+import time
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -44,10 +45,11 @@ def _generate_random_mask(shape):
     return (np.random.rand(*shape) > 0.2).astype('float32')
 
 
-class _MaskGenerator:
-    def __init__(self, masks_dir, n_images_by_file=10000):
+class _MaskGenerator:    
+    def __init__(self, masks_dir, n_images_by_file=10000,
+                 min_stroke_width=5, max_stroke_width=15,
+                 fat_stroke_width=40, fat_stroke_prob=0.2):
         self.strokes = []
-        n_images_by_file = 10000
 
         for name in os.listdir(masks_dir):
             reader = jsonlines.open(os.path.join(masks_dir, name))
@@ -60,9 +62,21 @@ class _MaskGenerator:
                 if i > n_images_by_file:
                     break
 
-    def __call__(self, shape, min_stroke_width=8):
+        self.min_stroke_width = min_stroke_width
+        self.max_stroke_width = max_stroke_width
+        self.fat_stroke_width = fat_stroke_width
+        self.fat_stroke_prob = fat_stroke_prob
+
+        self.rng = np.random.RandomState()
+
+    def __call__(self, shape, seed=None):
+        if seed is not None:
+            self.rng.seed(seed)
+        else:
+            self.rng.seed(int(time.time() * 100) % (2 ** 32 - 1))
+        
         target_width, target_height = shape
-        n_strokes = int(np.random.normal(5, 1))
+        
         fig = Figure()
         canvas = FigureCanvas(fig)
         ax = fig.gca()
@@ -81,18 +95,27 @@ class _MaskGenerator:
             image = image.crop((left, top, right, bottom))
 
             return image
-
-        for _ in range(n_strokes):
-            stroke_index = np.random.randint(0, len(self.strokes))
-            stroke_width = np.random.randint(
-                min_stroke_width, min_stroke_width + 2
-            )
+        
+        if self.rng.choice([True, False], p=[self.fat_stroke_prob, 1 - self.fat_stroke_prob]):
+            stroke_index = self.rng.randint(0, len(self.strokes))
+            stroke_width = self.fat_stroke_width
             stroke = self.strokes[stroke_index][
                 :int(len(self.strokes[stroke_index]) * 1)
             ]
             ax.plot(*stroke, color='black', lw=stroke_width)
+        else:
+            n_strokes = int(self.rng.normal(5, 1))
+            for _ in range(n_strokes):
+                stroke_index = self.rng.randint(0, len(self.strokes))
+                stroke_width = self.rng.randint(
+                    self.min_stroke_width, self.max_stroke_width
+                )
+                stroke = self.strokes[stroke_index][
+                    :int(len(self.strokes[stroke_index]) * 1)
+                ]
+                ax.plot(*stroke, color='black', lw=stroke_width)
 
-        canvas.draw()       # draw the canvas, cache the renderer
+        canvas.draw()  # draw the canvas, cache the renderer
         width, height = fig.get_size_inches() * fig.get_dpi()
         image = np.frombuffer(
             canvas.tostring_rgb(),
@@ -110,34 +133,49 @@ class _MaskGenerator:
 
 
 class _CelebaDataset(torch.utils.data.Dataset):
-    def __init__(self, input_dir, masks_dir, transform=_final_transform):
+    def __init__(self, input_dir, masks_dir, transform=_final_transform, val=False,
+                 min_stroke_width=5, max_stroke_width=15,
+                 fat_stroke_width=40, fat_stroke_prob=0.2):
         self._input = [
             os.path.join(input_dir, x)
             for x in os.listdir(input_dir)
         ]
         self._transform = transform
         if masks_dir is not None:
-            self._mask_generator = _MaskGenerator(masks_dir)
+            self._mask_generator = _MaskGenerator(
+                masks_dir,
+                min_stroke_width=min_stroke_width, max_stroke_width=max_stroke_width,
+                fat_stroke_width=fat_stroke_width, fat_stroke_prob=fat_stroke_prob
+            )
         else:
             self._mask_generator = _generate_random_mask
+            
+        self.val = val
 
     def __len__(self):
         return len(self._input)
 
     def __getitem__(self, index):
         img = Image.open(self._input[index])
-        return self._transform((img, self._mask_generator(img.size[::-1])))
+        if self.val:  # pass seed to generate same mask for same image
+            mask = self._mask_generator(img.size[::-1], seed=index)
+        else:
+            mask = self._mask_generator(img.size[::-1])
+        return self._transform((img, mask))
 
 
 def _make_default_transform():
     return tv.transforms.Compose([
-        _Flipper(),
-        _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
+        # _Flipper(),
+        # _Jitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1),
         _final_transform
     ])
 
 
-def make_dataloader(input_dir, masks_dir, transform='default', *args, **kwargs):
+def make_dataloader(input_dir, masks_dir, transform='default', val=False,
+                    min_stroke_width=5, max_stroke_width=15,
+                    fat_stroke_width=40, fat_stroke_prob=0.2,
+                    *args, **kwargs):
     """Make data loader: input images and generated masks.
 
     Parameters
@@ -159,5 +197,9 @@ def make_dataloader(input_dir, masks_dir, transform='default', *args, **kwargs):
     """
     if transform == 'default':
         transform = _make_default_transform()
-    dataset = _CelebaDataset(input_dir, masks_dir, transform)
+    dataset = _CelebaDataset(
+        input_dir, masks_dir, transform, val=val,
+        min_stroke_width=min_stroke_width, max_stroke_width=max_stroke_width,
+        fat_stroke_width=fat_stroke_width, fat_stroke_prob=fat_stroke_prob
+    )
     return torch.utils.data.DataLoader(dataset, *args, **kwargs)
