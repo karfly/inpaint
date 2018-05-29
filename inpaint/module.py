@@ -314,7 +314,8 @@ class _InpaintUpBlock(nn.Module):
         out_channels,
         kernel_size,
         padding='same',
-        bn=True
+        bn=True,
+        upsample_mode='bilinear'
     ):
         super().__init__()
 
@@ -327,8 +328,13 @@ class _InpaintUpBlock(nn.Module):
         self.padding = padding
 
         self.bn = bn
-        # TODO: align corners!
-        self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
+        
+        if upsample_mode == 'nearest':
+            self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
+        elif upsample_mode == 'bilinear':
+            self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        else:
+            raise NotImplemented('{} is not valid upsample_mode'.format(upsample_mode))
 
         self.pconv = _PartialConv2d(
             in_channels + in_channels_bridge,
@@ -357,7 +363,9 @@ class _InpaintUpBlock(nn.Module):
 class InpaintNet(nn.Module):
     """ Image Inpainting Network (https://arxiv.org/abs/1804.07723)"""
 
-    def __init__(self, in_channels=3, out_channels=3):
+    def __init__(self,
+                in_channels=3, out_channels=3,
+                upsample_mode='bilinear', bn=False):
         super().__init__()
 
         self.in_channels = in_channels
@@ -369,23 +377,23 @@ class InpaintNet(nn.Module):
                 in_channels, 64, 7, stride=2, padding='same', bn=False
             ),
             _InpaintDownBlock(64, 128, 5, stride=2, padding='same', bn=False),
-            _InpaintDownBlock(128, 256, 5, stride=2, padding='same', bn=False),
-            _InpaintDownBlock(256, 512, 3, stride=2, padding='same', bn=False),
-            _InpaintDownBlock(512, 512, 3, stride=2, padding='same', bn=False),
-            _InpaintDownBlock(512, 512, 3, stride=2, padding='same', bn=False),
-            _InpaintDownBlock(512, 512, 3, stride=2, padding='same', bn=False),
+            _InpaintDownBlock(128, 256, 5, stride=2, padding='same', bn=bn),
+            _InpaintDownBlock(256, 512, 3, stride=2, padding='same', bn=bn),
+            _InpaintDownBlock(512, 512, 3, stride=2, padding='same', bn=bn),
+            _InpaintDownBlock(512, 512, 3, stride=2, padding='same', bn=bn),
+            _InpaintDownBlock(512, 512, 3, stride=2, padding='same', bn=bn),
         ])
         self.depth = len(self.down_blocks)
 
         # up
         self.up_blocks = nn.ModuleList([
-            _InpaintUpBlock(512, 512, 512, 3, padding='same', bn=False),
-            _InpaintUpBlock(512, 512, 512, 3, padding='same', bn=False),
-            _InpaintUpBlock(512, 512, 512, 3, padding='same', bn=False),
-            _InpaintUpBlock(512, 256, 256, 3, padding='same', bn=False),
-            _InpaintUpBlock(256, 128, 128, 3, padding='same', bn=False),
-            _InpaintUpBlock(128, 64, 64, 3, padding='same', bn=False),
-            _InpaintUpBlock(64, 3, 3, 3, padding='same', bn=False)
+            _InpaintUpBlock(512, 512, 512, 3, padding='same', bn=bn, upsample_mode=upsample_mode),
+            _InpaintUpBlock(512, 512, 512, 3, padding='same', bn=bn, upsample_mode=upsample_mode),
+            _InpaintUpBlock(512, 512, 512, 3, padding='same', bn=bn, upsample_mode=upsample_mode),
+            _InpaintUpBlock(512, 256, 256, 3, padding='same', bn=bn, upsample_mode=upsample_mode),
+            _InpaintUpBlock(256, 128, 128, 3, padding='same', bn=bn, upsample_mode=upsample_mode),
+            _InpaintUpBlock(128, 64, 64, 3, padding='same', bn=bn, upsample_mode=upsample_mode),
+            _InpaintUpBlock(64, 3, 3, 3, padding='same', bn=False, upsample_mode=upsample_mode)
         ])
 
     def forward(self, x, mask):
