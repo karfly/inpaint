@@ -315,7 +315,7 @@ class _InpaintUpBlock(nn.Module):
         kernel_size,
         padding='same',
         bn=True,
-        upsample_mode='bilinear'
+        upsample_mode='nearest'
     ):
         super().__init__()
 
@@ -365,7 +365,7 @@ class InpaintNet(nn.Module):
 
     def __init__(self,
                 in_channels=3, out_channels=3,
-                upsample_mode='bilinear', bn=False):
+                upsample_mode='nearest', bn=False):
         super().__init__()
 
         self.in_channels = in_channels
