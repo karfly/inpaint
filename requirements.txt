@@ -1,0 +1,20 @@
+numpy==1.14.3
+Pillow==5.1.0
+
+# app
+Flask==1.0.2
+gunicorn==19.8.1
+pymongo==3.6.1
+
+# dev
+pycodestyle==2.4.0
+pyflakes==1.6.0
+
+# inpaint
+jsonlines==1.2.0
+matplotlib==2.2.2
+torch==0.4.0
+torchvision==0.2.1
+
+# research
+tqdm==4.23.3

@@ -1,24 +1,13 @@
 FROM ubuntu:xenial
 
-ENV MODEL_URL https://www.dropbox.com/s/gb0yamqa6cnoomy/model_no_sigmoid_lr_all_50.pth?dl=1
-
 RUN apt-get update && apt-get install -y \
         wget python3 python3-dev python3-pip
-
 RUN pip3 install --upgrade pip
-RUN pip3 install Flask==1.0.2 \
-                 gunicorn==19.8.1 \
-                 jsonlines==1.2.0 \
-                 matplotlib==2.2.2 \
-                 numpy==1.14.3 \
-                 Pillow==5.1.0 \
-                 pycodestyle==2.4.0 \
-                 tqdm==4.23.3 \
-                 pyflakes==1.6.0 \
-                 pymongo==3.6.1 \
-                 torch==0.4.0 \
-                 torchvision==0.2.1
 
+COPY requirements.txt /
+RUN pip3 install -r /requirements.txt
+
+ENV MODEL_URL https://www.dropbox.com/s/gb0yamqa6cnoomy/model_no_sigmoid_lr_all_50.pth?dl=1
 RUN wget -O model.state_dict $MODEL_URL
 
 COPY . /inpaint
