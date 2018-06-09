@@ -54,9 +54,14 @@ def make_inpainter(state_dict_path=None):
     """
     if state_dict_path:
         model = InpaintNet()
-        model.load_state_dict(
-            torch.load(state_dict_path, map_location=lambda *x: x[0])
-        )
+        state_dict = torch.load(state_dict_path, map_location=lambda *x: x[0])
+
+        # if multi-gpu setting was used
+        for key in list(state_dict.keys()):
+            new_key = key.replace('module.', '')
+            state_dict[new_key] = state_dict.pop(key)
+
+        model.load_state_dict(state_dict)
         model.eval()
     else:
         model = None
