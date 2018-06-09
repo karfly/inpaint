@@ -7,7 +7,7 @@ RUN pip3 install --upgrade pip
 COPY requirements.txt /
 RUN pip3 install -r /requirements.txt
 
-ENV MODEL_URL https://www.dropbox.com/s/gb0yamqa6cnoomy/model_no_sigmoid_lr_all_50.pth?dl=1
+ENV MODEL_URL https://www.dropbox.com/s/sfw94zc5u8zi1cl/model_selfie_13.pth?dl=1
 RUN wget -O model.state_dict $MODEL_URL
 
 COPY . /inpaint
