@@ -79,7 +79,7 @@ function Api() {
 
 }
 
-Api.prototype.sendImage = function (canvas_object, callback) { //$('#canvas-in')[0]
+Api.prototype.sendImage = function (canvas_object, callback) {
     var blob = dataURItoBlob(canvas_object.toDataURL());
     var formData = new FormData();
     formData.append('image', blob, 'image.png');
@@ -95,9 +95,10 @@ Api.prototype.sendImage = function (canvas_object, callback) { //$('#canvas-in')
     });
 };
 
-Api.prototype.sendMask = function (canvas_object, callback) { // $('#canvas-mask-delta')[0]
+Api.prototype.sendMask = function (image_id, canvas_object, callback) {
     var blob = dataURItoBlob(canvas_object.toDataURL());
     var formData = new FormData();
+    formData.append('image_id', image_id);
     formData.append('step_id', drawHistory.cStep);
     formData.append('mask', blob, 'mask.png');
 
@@ -200,7 +201,7 @@ DrawEngine.prototype.applyMask = function () {
         'mask': this.mask_object.toDataURL()
     });
     var self = this;
-    api.sendMask(this.mask_object, function (data) {
+    api.sendMask(drawHistory.image_id, this.mask_object, function (data) {
         if (drawHistory.image_id === data['image_id']) {
             var resultURI = data['result'];
             drawHistory.update(data['step_id'], 'result', resultURI);

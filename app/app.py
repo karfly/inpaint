@@ -83,7 +83,7 @@ def add_image():
 def apply_mask():
     storage = Storage()
 
-    image_id = session["image_id"]
+    image_id = request.form['image_id']  # TODO: this is dangerous, but simplier for API
     step_id = int(request.form['step_id'])
 
     image = storage.get_image_by_id(image_id)
