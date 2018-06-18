@@ -8,6 +8,7 @@ from io import BytesIO
 import numpy as np
 from PIL import Image
 from flask import Flask, render_template, request, send_file, session, jsonify
+from flask_apidoc import ApiDoc
 
 from data import Storage, pil_to_dataURI
 
@@ -21,7 +22,7 @@ INPAINTER = None
 
 app = Flask(__name__)
 app.secret_key = 'super secret key 228'
-
+doc = ApiDoc(app=app)
 
 def setup_app(
         model_state_dict=None,
@@ -62,6 +63,14 @@ def index():
 
 @app.route('/pick_random')
 def pick_random():
+    """
+    @api {get} /pick_random Pick random photo
+    @apiVersion 0.0.1
+    @apiName pick_random
+    @apiGroup Inpaint
+
+    @apiSuccess {File}     File      random image png
+    """
     images = os.listdir(RANDOM_IMAGES_DIR)
     img_name = random.choice(images)
     return send_file(os.path.join(RANDOM_IMAGES_DIR, img_name))
@@ -69,6 +78,16 @@ def pick_random():
 
 @app.route('/add_image', methods=['POST'])
 def add_image():
+    """
+    @api {post} /add_image Add image
+    @apiVersion 0.0.1
+    @apiName add_image
+    @apiGroup Inpaint
+
+    @apiParam {File}       image     Png file 256x256
+
+    @apiSuccess {String}   image_id  Image Id in DB
+    """
     image = Image.open(BytesIO(request.files['image'].read()))
     image = image.resize((256, 256))
 
@@ -81,6 +100,20 @@ def add_image():
 
 @app.route('/apply_mask', methods=['POST'])
 def apply_mask():
+    """
+    @api {post} /apply_mask Apply mask
+    @apiVersion 0.0.1
+    @apiName apply_mask
+    @apiGroup Inpaint
+
+    @apiParam {String}     image_id  Id of source image to apply
+    @apiParam {Integer}    step_id   Stroke number in history
+    @apiParam {File}       mask      Png file 256x256, where painted is white and remained is black/transparent
+
+    @apiSuccess {String}   image_id  Id of applied source image (unchanged)
+    @apiSuccess {Integer}  step_id   Stroke number in history (unchanged)
+    @apiSuccess {String}   result    DataURI of result png
+    """
     storage = Storage()
 
     image_id = request.form['image_id']  # TODO: this is dangerous, but simplier for API

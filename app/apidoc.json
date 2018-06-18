@@ -1,0 +1,7 @@
+{
+  "name": "Inpaint REST API",
+  "version": "0.0.1",
+  "description": "API methods of Inpaint app",
+  "title": "Inpaint REST API",
+  "url": "http://inpaint.aiaiai.team/"
+}
