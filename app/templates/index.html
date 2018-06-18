@@ -47,7 +47,7 @@
             margin-bottom: 4px;
         }
 
-        #header-buttons {
+        .header-buttons {
             display: none;
         }
 
@@ -58,14 +58,14 @@
 
         @media (min-width: 576px) {
             .navbar .container {
-                display: inline-block;
+                display: flex;
             }
 
-            #header-buttons {
-                display: inline-block;
+            .header-buttons {
+                display: flex;
             }
 
-            #header-buttons-touch {
+            .header-buttons-touch {
                 display: none;
             }
 
@@ -85,20 +85,31 @@
 </head>
 <body class="bg-dark text-light">
 <nav class="navbar navbar-dark bg-dark">
-    <div class="container" style="justify-content: normal">
-        <a id='logo' class="navbar-brand" href="#">Inpainting</a>
+    <div class="container">
+        <a id='logo' class="navbar-brand" href="#">Inpaint</a>
 
-        <div id="header-buttons">
-            <button class="btn btn-secondary btn-load">Load image</button>
-            <button class="btn btn-secondary btn-pick-random">Pick random</button>
-            <button class="btn btn-secondary btn-save">Save result</button>
-        </div>
+        <ul class="navbar-nav mr-auto header-buttons" style="flex-direction: row">
+            <li class="nav-item" style="margin-right: 4px">
+                <button class="btn btn-secondary btn-load">Load image</button>
+            </li>
+            <li class="nav-item">
+                <button class="btn btn-secondary btn-pick-random">Pick random</button>
+            </li>
+        </ul>
 
-        <ul id="header-buttons-touch" class="navbar-nav" style="flex-direction: row;">
+        <ul class="navbar-nav ml-auto header-buttons" style="float: right">
+            <li class="btn btn-secondary btn-save">Save result</li>
+        </ul>
+
+        <ul class="navbar-nav mr-auto header-buttons-touch" style="flex-direction: row;">
             <li class="nav-item nav-link btn-load touch">Load</li>
             <li class="nav-item nav-link btn-pick-random touch">Pick</li>
+        </ul>
+
+        <ul class="navbar-nav ml-auto header-buttons-touch" style="float: right;">
             <li class="nav-item nav-link btn-save touch">Save</li>
         </ul>
+
         <a id="save-link" style="display: none;"></a>
     </div>
 </nav>
