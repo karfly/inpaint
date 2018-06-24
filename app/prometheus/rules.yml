@@ -1,0 +1,13 @@
+groups:
+
+  - name: requests
+    rules:
+    - record: requests_per_second
+      expr: sum(rate(request_seconds_count[1h]))
+    - record: requests_time
+      expr: request_seconds_sum / request_seconds_count
+
+  - name: inpaint
+    rules:
+    - record: inpaint_apply_inpainter_time
+      expr: inpaint_apply_inpainter_seconds_sum / inpaint_apply_inpainter_seconds_count
