@@ -2,6 +2,10 @@
 .idea
 *.state_dict
 
+# Prometheus
+app/prometheus/client_data/*
+app/prometheus/data
+
 # macOS
 .DS_Store
 

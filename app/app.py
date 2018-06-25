@@ -6,11 +6,22 @@ import sys
 from io import BytesIO
 
 import numpy as np
+import prometheus_client as prometheus
+import prometheus_client.multiprocess as prometheus_multiprocess
 from PIL import Image
-from flask import Flask, render_template, request, send_file, session, jsonify
+from flask import (
+    Flask, Response, render_template, request, send_file, session, jsonify
+)
 from flask_apidoc import ApiDoc
 
 from data import Storage, pil_to_dataURI
+from metrics import (
+    METRIC_INDEX_TIME,
+    METRIC_PICK_RANDOM_TIME,
+    METRIC_ADD_IMAGE_TIME,
+    METRIC_APPLY_MASK_TIME,
+    apply_inpainter
+)
 
 sys.path.append('..')
 from inpaint import make_inpainter
@@ -18,6 +29,7 @@ from inpaint import make_inpainter
 STATIC_DIR = 'static'
 RANDOM_IMAGES_DIR = None
 DEFAULT_RANDOM_IMAGES_DIR = os.path.join(STATIC_DIR, 'random_images')
+
 INPAINTER = None
 
 app = Flask(__name__)
@@ -57,11 +69,13 @@ def setup_app(
 
 
 @app.route('/')
+@METRIC_INDEX_TIME.time()
 def index():
     return render_template('index.html')
 
 
 @app.route('/pick_random')
+@METRIC_PICK_RANDOM_TIME.time()
 def pick_random():
     """
     @api {get} /pick_random Pick random photo
@@ -77,6 +91,7 @@ def pick_random():
 
 
 @app.route('/add_image', methods=['POST'])
+@METRIC_ADD_IMAGE_TIME.time()
 def add_image():
     """
     @api {post} /add_image Add image
@@ -99,6 +114,7 @@ def add_image():
 
 
 @app.route('/apply_mask', methods=['POST'])
+@METRIC_APPLY_MASK_TIME.time()
 def apply_mask():
     """
     @api {post} /apply_mask Apply mask
@@ -127,7 +143,8 @@ def apply_mask():
     reversed_mask = np.array(reversed_mask, dtype=np.float32)[:, :, :-1].transpose((2, 0, 1))
     mask = np.where(reversed_mask, 0, 1).astype(np.float32)
 
-    result = INPAINTER(np.where(mask, image, 0) / 255., mask)
+    result = apply_inpainter(INPAINTER, mask, image)
+    # result = INPAINTER(np.where(mask, image, 0) / 255., mask)
     result = Image.fromarray((result.transpose((1, 2, 0)) * 255.).astype(np.uint8))
 
     mask_image = Image.fromarray((mask.transpose((1, 2, 0)) * 255).astype(np.uint8))
@@ -137,6 +154,16 @@ def apply_mask():
         'step_id': step_id,
         'result': pil_to_dataURI(result)
     })
+
+
+@app.route('/metrics')
+def metrics():
+    registry = prometheus.CollectorRegistry()
+    prometheus_multiprocess.MultiProcessCollector(registry)
+    return Response(
+        prometheus.generate_latest(registry),
+        mimetype=prometheus.CONTENT_TYPE_LATEST
+    )
 
 
 def main():

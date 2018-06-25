@@ -16,4 +16,9 @@ RUN mv model.state_dict /inpaint/app/static/models/
 EXPOSE 5000
 
 WORKDIR /inpaint/app
-CMD ["gunicorn", "app:setup_app('static/models/model.state_dict')", "-b", "0.0.0.0:5000", "-w", "4"]
+CMD [ \
+    "gunicorn", "app:setup_app('static/models/model.state_dict')", \
+    "--bind", "0.0.0.0:5000", \
+    "--config", "gunicorn_config.py", \
+    "--workers", "4" \
+]
