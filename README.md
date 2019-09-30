@@ -31,8 +31,9 @@ If you want to explore the project more deeply, here are some notes:
 - to run the app locally see the example of a command in app/run.sh and the documentation of the function `setup_app` in `app/app.py`
 
 ## Contributors
-- [Ivan Golovanov](https://github.com/legendawes) - frontend, backend, mask generation, research.
+- [Ivan Golovanov](https://github.com/legendawes) - mask generation, research.
 - [Yury Gorishniy](https://github.com/StrausMG) - backend, data manipulation, inpaint loss.
+- [Vladimir Ivashkin](https://github.com/vlivashkin) - frontend, backend.
 - [Karim Iskakov](https://github.com/karfly) - model training, mask generation, CelebA-HQ generation.
 
 ## References
